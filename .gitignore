@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.turbo/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+prisma/migrations/dev.db
+prisma/*.db
+prisma/*.db-journal
+coverage/
+.DS_Store
+Thumbs.db

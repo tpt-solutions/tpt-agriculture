@@ -1,102 +1,101 @@
-# TPT Agriculture Platform — Task Tracker
-
-> Stack: Next.js 15 (App Router) | Supabase (Postgres + Auth + Storage) | Vercel | pnpm monorepo + Turborepo | Electron (desktop shell) | PWA (offline)
-
----
-
-## Phase 1 — Foundation ✓ (2026-05-26) [Superseded by Phase 1b — SaaS pivot]
-
-Built as self-hosted Vite + React + Express. Replaced in Phase 1b with Next.js + Supabase SaaS stack.
+# TPT Agriculture — Redevelopment Checklist
+> Tauri 2 Desktop + PWA | Offline-first | Open Source Apache | No cloud required
 
 ---
 
-## Phase 1b — SaaS Foundation Rewrite (current sprint)
+## Phase 0 — Scaffold ✅
+- [x] Add `apps/desktop/` directory
+- [x] Init Tauri 2 + Vite + React inside `apps/desktop/`
+- [x] Add `apps/desktop` to pnpm workspace and Turborepo pipeline
+- [ ] Confirm `pnpm desktop:dev` opens a working Tauri window *(run manually)*
+- [x] Add `vite-plugin-pwa` to Vite config
+- [x] Confirm PWA manifest + service worker generated in build output
 
-- [x] Update `packages/core` — new Prisma schema (Profile, Tenant, TenantUser, Subscription), Supabase client factory, bundle-modules config, module registry, access helper
-- [x] Delete `apps/api` + `apps/licence-server` (replaced by Next.js API routes)
-- [ ] Create `apps/web` (Next.js 15) — scaffold, Tailwind, Supabase auth, middleware, layout
-- [ ] Auth pages — login, register (creates Profile + Tenant + TenantUser)
-- [ ] Stripe routes — webhook (checkout, subscription events), checkout session creator
-- [ ] Onboarding wizard — country → bundle selection → farm size (ha / m² per indoor type) → Stripe Checkout → done
-- [ ] PWA — manifest.json, next-pwa + Workbox config, BackgroundSync offline writes, offline-ready toast
-- [ ] Dashboard + Settings pages (subscription status, renewal date, add ha/m² packs)
-- [ ] Update `.env.example` for Supabase + Stripe stack
-- [ ] Deploy to Vercel (staging), connect Supabase project
+## Phase 1 — Database Layer ✅
+- [x] Remove `packages/core/prisma/` folder
+- [x] Add Drizzle ORM + Drizzle Kit to `packages/core`
+- [x] Write Drizzle schema: `identity.ts` (users, sessions)
+- [x] Write Drizzle schema: `farm.ts` (farms, farm_users)
+- [x] Write Drizzle schema: `horticulture.ts` (all horticulture tables)
+- [x] Write Drizzle schema: `livestock.ts` (all livestock tables)
+- [x] Write `apps/desktop/src/db/adapter-tauri.ts` (plugin-sql SQLite)
+- [x] Write `apps/desktop/src/db/adapter-web.ts` (wa-sqlite + OPFS)
+- [x] Write `apps/desktop/src/db/index.ts` (`getDb()` with platform detection)
+- [x] Run `drizzle-kit generate` → confirm migration SQL files created
+- [ ] Test: DB initialises on first launch in Tauri window
+- [ ] Test: DB initialises in browser PWA (Chrome/Firefox with OPFS)
 
----
+## Phase 2 — Local Auth ✅
+- [x] Create `apps/desktop/src/auth/` module
+- [x] Build "Create Farm" setup wizard (farm name + owner account)
+- [x] Build login screen (email + password, bcrypt verify)
+- [x] Implement session context (React context + `useSession` hook)
+- [x] Add route guard: redirect to `/login` if no active session
+- [ ] Test: create farm → restart app → login works correctly
 
-## Phase 2 — Horticulture Modules ✓ (2026-05-26)
+## Phase 3 — App Shell ✅
+- [x] Set up React Router v7 with all main routes
+- [x] Port sidebar + layout from `packages/ui/` components
+- [x] Build dashboard with module cards
+- [x] Build Settings → Users page (OWNER can add/edit/remove users)
+- [x] Build Settings → Farm (edit farm name, view farm ID)
+- [ ] Test: all routes navigate correctly with correct layout
 
-- [x] `packages/modules/field-management` — Farm → Field CRUD, map/grid of plots
-- [x] `packages/modules/crop-planning` — Calendar, planting schedules, task list
-- [x] `packages/modules/harvest-tracking` — Yield entry, batch records, grade tracking
-- [x] `packages/modules/pest-spray-log` — Spray events, chemical register, withholding periods
-- [x] `packages/modules/viticulture` — Block/row management, canopy notes, brix tracking, vintage records
-- [x] `packages/modules/orchard` — Tree inventory, spray programs, harvest bins
-- [x] `packages/modules/vegetables` — Bed/row tracking, succession planting
-- [x] `packages/modules/microgreens` — Tray tracking, 7–14 day cycles, variety + substrate, yield per tray, batch revenue (billed per m²)
-- [x] `packages/modules/protected-cropping` — Greenhouse/tunnel structure records, climate log, fertigation (billed per m²)
-- [x] `packages/modules/aquaponics` — Fish stock + grow beds, water quality (pH/ammonia/nitrate/DO), feeding schedules, plant bed yields (billed per m²)
+## Phase 4 — Module Services ✅
+- [x] Update `packages/modules/field-management/src/service.ts` → Drizzle
+- [x] Update `packages/modules/crop-planning/src/service.ts` → Drizzle
+- [x] Update `packages/modules/harvest-tracking/src/service.ts` → Drizzle
+- [x] Update `packages/modules/pest-spray-log/src/service.ts` → Drizzle
+- [x] Update `packages/modules/viticulture/src/service.ts` → Drizzle
+- [x] Update `packages/modules/orchard/src/service.ts` → Drizzle
+- [x] Update `packages/modules/vegetables/src/service.ts` → Drizzle
+- [x] Update `packages/modules/microgreens/src/service.ts` → Drizzle
+- [x] Update `packages/modules/protected-cropping/src/service.ts` → Drizzle
+- [x] Update `packages/modules/aquaponics/src/service.ts` → Drizzle
+- [x] Update `packages/modules/cattle-dairy/src/service.ts` → Drizzle
+- [x] Update `packages/modules/cattle-beef/src/service.ts` → Drizzle
+- [x] Update `packages/modules/sheep/src/service.ts` → Drizzle
+- [x] Update `packages/modules/goats/src/service.ts` → Drizzle
+- [x] Update `packages/modules/deer/src/service.ts` → Drizzle
+- [x] Update `packages/modules/pigs/src/service.ts` → Drizzle
+- [x] Update `packages/modules/poultry/src/service.ts` → Drizzle
+- [x] Update `packages/modules/bees/src/service.ts` → Drizzle
+- [x] Update `packages/modules/pasture/src/service.ts` → Drizzle
+- [ ] Wire each module's service into React Query hooks in app
+- [ ] Test CRUD for at least one horticulture + one livestock module end-to-end
 
-Each module: `package.json` + `tsconfig.json` + `src/{index,nav,schemas,service}.ts`. Prisma models in `packages/core/prisma/schema.prisma`. Dynamic route at `apps/web/app/(app)/modules/[moduleId]/page.tsx`.
+## Phase 5 — Tauri Build
+- [x] Configure `tauri.conf.json`: app name, identifier, window size *(done in scaffold)*
+- [ ] Add app icons (1024x1024 PNG → run `pnpm tauri icon <source.png>`) — **blocked: needs source icon PNG**
+- [ ] Run `pnpm desktop:build` on Windows → confirm `.exe` installer produced
+- [ ] Run `pnpm desktop:build` on Mac → confirm `.dmg` produced
+- [ ] Test: install from `.exe`, launch, create farm, add record, reinstall → data persists
 
----
+## Phase 6 — PWA Polish
+- [x] Tune `vite-plugin-pwa`: precache shell, all-local data (no network fetches)
+- [ ] Test: install PWA in Chrome → go offline → confirm all navigation works
+- [ ] Test: add record offline → reload → record persists (OPFS SQLite)
+- [ ] Add install prompt banner (show when `beforeinstallprompt` fires)
+- [ ] Run Lighthouse PWA audit → achieve 100 PWA score
 
-## Phase 3 — Livestock Modules
+## Phase 7 — Encrypted Backup (optional)
+> Integrates with backup.tptsolutions.co.nz. Zero-knowledge: server never sees plaintext.
 
-- [ ] `packages/modules/cattle-dairy` — Herd records, milk production, SCC, drying off
-- [ ] `packages/modules/cattle-beef` — Mob tracking, weight gain records, drafting targets
-- [ ] `packages/modules/sheep` — Flock records, lambing %, drenching, shearing, wool
-- [ ] `packages/modules/goats` — Herd, milking records, fibre tracking
-- [ ] `packages/modules/deer` — Velvet records, stag/hind management, venison
-- [ ] `packages/modules/pigs` — Sow records, litter tracking, feed conversion
-- [ ] `packages/modules/poultry` — Flock batches, egg production, mortality log
-- [ ] `packages/modules/bees` — Hive inspections, honey harvest, mite treatment, queen records
-- [ ] `packages/modules/pasture` — Paddock rotation, cover measurement, feed budget
+- [ ] Add `@tauri-apps/plugin-stronghold` for OS keychain storage
+- [ ] Generate 256-bit key on farm setup using Argon2id
+- [ ] Encode key as 24-word BIP39 recovery phrase
+- [ ] Build recovery phrase screen with **"Email to myself"** button (opens `mailto:` link, works offline)
+- [ ] Build recovery phrase screen with **"Copy to clipboard"** button
+- [ ] Add mandatory "I have saved my recovery phrase" checkbox — setup blocks until ticked
+- [ ] Store key in Tauri Stronghold (desktop) / encrypted IndexedDB (PWA)
+- [ ] Add Settings → Backup → "View recovery phrase" (OWNER only, requires password re-entry)
+- [ ] Implement: SQLite export → AES-256-GCM encrypt → upload to backup.tptsolutions.co.nz
+- [ ] Implement: download backup list → select → enter recovery phrase → decrypt → import
+- [ ] Test: backup → fresh install → restore with phrase → data matches
 
----
-
-## Phase 4 — Platform Feature Modules
-
-- [ ] `packages/modules/financials` — Income/expense ledger, ROI per enterprise, GST summary
-- [ ] `packages/modules/inventory` — Chemical, seed, feed and fertiliser stock; movements; low-stock alerts
-- [ ] `packages/modules/equipment` — Asset register, maintenance log, WOF/COF reminders
-- [ ] `packages/modules/weather` — Open-Meteo integration, daily weather log, spray window calculator
-- [ ] `packages/modules/compliance` — Regulatory checklist per country profile, audit-ready document store
-- [ ] `packages/modules/staff` — Roster, timesheets, task assignment, contractor records
-- [ ] `packages/modules/soil-water` — Soil test records, nutrient budget, irrigation log
-
----
-
-## Phase 5 — Reporting & Analytics
-
-- [ ] Reporting engine — per-module PDF (React-PDF) + CSV export
-- [ ] Dashboard analytics — module-specific charts (Recharts or Tremor)
-- [ ] Notifications — Vercel Cron-based reminders, in-app notification centre
-- [ ] File attachments — Supabase Storage, link to any record
-
----
-
-## Phase 6 — Desktop & Distribution
-
-- [ ] `apps/desktop` — Electron shell wrapping Vercel-hosted app; PWA handles offline (~2 month limit)
-- [ ] Electron: tray icon, local file export, OS notifications
-- [ ] Installer builds — `electron-builder` `.exe` (Windows) + `.dmg` (Mac)
-- [ ] Per-bundle installer variants (Horticulture, Livestock, Full Platform)
-
----
-
-## Notes
-
-- **SaaS model**: Supabase + Vercel, no self-hosted server required
-- **Pricing**: Setup fee (one-time, via Stripe) + annual subscription
-  - Outdoor modules (cropping, livestock, pasture) — billed by **hectares**, 50ha add-on packs
-  - Indoor/specialty modules (microgreens, aquaponics, protected cropping) — billed by **m²** at different per-module rates
-  - All sizes stored on `Subscription.hectares` / `Subscription.indoorSqm` (JSON map per module type)
-- **Free trial**: 30 days, no card required
-- **Access model**: Standard SaaS — pay annually or lose access. `Subscription.status` ACTIVE/TRIALING = access; PAST_DUE/CANCELLED/UNPAID = blocked at `currentPeriodEnd`
-- **Module access**: `Subscription.bundleTier` + `BUNDLE_MODULES` config at runtime — no join table
-- **Offline**: PWA primary (~2 month cache limit before reconnect required); Electron = desktop shell wrapping Vercel URL, same PWA offline layer
-- **Data access**: All farm data lives in Supabase — query any tenant's data directly via Supabase Studio or API
-- **Country profiles**: JSON config per country (units, currency, compliance fields)
-- **Module system**: Each `packages/modules/*` package exports a Next.js route handler, nav config, and Prisma migration; registered statically via `MODULE_REGISTRY`
+## Cleanup ✅
+- [x] Remove `apps/web/` (entire Next.js app)
+- [x] Remove Supabase, Stripe, Prisma, next-pwa from all `package.json` files
+- [x] Remove `vercel.json` (was already absent)
+- [ ] Update root README with new setup instructions
+- [x] Confirm `pnpm typecheck` passes with zero errors *(desktop + core + all 19 modules + UI pass; apps/web removed)*

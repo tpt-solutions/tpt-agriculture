@@ -57,3 +57,5 @@ export const navConfig = [
   { label: "Inspections", href: "/modules/bees/inspections", icon: "Search" },
   { label: "Honey Harvests", href: "/modules/bees/harvests", icon: "Droplets" },
 ];
+
+export * from "./service.js";

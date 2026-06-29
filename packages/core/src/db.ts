@@ -1,11 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+import type { DrizzleDb } from "./db-types.js";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+let _db: DrizzleDb | null = null;
 
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env["NODE_ENV"] === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+export function setDb(database: DrizzleDb) {
+  _db = database;
+}
 
-if (process.env["NODE_ENV"] !== "production") globalForPrisma.prisma = db;
+export function getDb(): DrizzleDb {
+  if (!_db) throw new Error("Database not initialized. Call setDb() first.");
+  return _db;
+}

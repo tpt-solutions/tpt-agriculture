@@ -11,3 +11,10 @@ prisma/*.db-journal
 coverage/
 .DS_Store
 Thumbs.db
+
+# Tauri / Rust
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# TPT Code Command Center — contains API keys and session token
+.vscode/settings.json

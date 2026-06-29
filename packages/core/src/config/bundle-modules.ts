@@ -1,6 +1,10 @@
-import type { BundleTier } from "@prisma/client";
+// Module groupings — used for feature-gating on the dashboard (no billing).
+// A farm can enable any subset of modules; these groups serve as sensible defaults
+// for the setup wizard ("I run horticulture", "I run livestock", "Both").
 
-export const BUNDLE_MODULES: Record<BundleTier, string[]> = {
+export type ModuleGroup = "HORTICULTURE" | "LIVESTOCK" | "FULL";
+
+export const BUNDLE_MODULES: Record<ModuleGroup, string[]> = {
   HORTICULTURE: [
     "field-management",
     "crop-planning",

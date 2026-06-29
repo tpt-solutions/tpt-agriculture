@@ -1,4 +1,3 @@
-import React from "react";
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar.js";
 import type { SidebarLink } from "./Sidebar.js";

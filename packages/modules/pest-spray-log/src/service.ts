@@ -1,58 +1,52 @@
-import { db } from "@tpt/core";
+import { eq, and, asc, desc, gte } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { chemicals, sprayEvents, fields } from "@tpt/core/schema";
 import type { CreateChemicalInput, UpdateChemicalInput, CreateSprayEventInput, UpdateSprayEventInput } from "./schemas.js";
 
-export async function listChemicals(tenantId: string) {
-  return db.chemical.findMany({
-    where: { tenantId },
-    orderBy: { name: "asc" },
-  });
+export async function listChemicals(farmId: string) {
+  const db = getDb();
+  return db.select().from(chemicals).where(eq(chemicals.farmId, farmId)).orderBy(asc(chemicals.name));
 }
 
-export async function createChemical(tenantId: string, data: CreateChemicalInput) {
-  return db.chemical.create({ data: { ...data, tenantId } });
+export async function createChemical(farmId: string, data: CreateChemicalInput) {
+  const db = getDb();
+  const [row] = await db.insert(chemicals).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateChemical(tenantId: string, chemicalId: string, data: UpdateChemicalInput) {
-  return db.chemical.update({ where: { id: chemicalId, tenantId }, data });
+export async function updateChemical(farmId: string, chemicalId: string, data: UpdateChemicalInput) {
+  const db = getDb();
+  const [row] = await db.update(chemicals).set(data)
+    .where(and(eq(chemicals.id, chemicalId), eq(chemicals.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteChemical(tenantId: string, chemicalId: string) {
-  return db.chemical.delete({ where: { id: chemicalId, tenantId } });
+export async function deleteChemical(farmId: string, chemicalId: string) {
+  const db = getDb();
+  await db.delete(chemicals).where(and(eq(chemicals.id, chemicalId), eq(chemicals.farmId, farmId)));
 }
 
-export async function listSprayEvents(tenantId: string) {
-  return db.sprayEvent.findMany({
-    where: { tenantId },
-    include: {
-      chemical: { select: { name: true, withholdingPeriodDays: true } },
-      field: { select: { name: true } },
-    },
-    orderBy: { applicationDate: "desc" },
-  });
+export async function listSprayEvents(farmId: string) {
+  const db = getDb();
+  return db.select().from(sprayEvents).where(eq(sprayEvents.farmId, farmId)).orderBy(desc(sprayEvents.applicationDate));
 }
 
-export async function createSprayEvent(tenantId: string, data: CreateSprayEventInput) {
-  return db.sprayEvent.create({ data: { ...data, tenantId } });
+export async function createSprayEvent(farmId: string, data: CreateSprayEventInput) {
+  const db = getDb();
+  const [row] = await db.insert(sprayEvents).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateSprayEvent(tenantId: string, eventId: string, data: UpdateSprayEventInput) {
-  return db.sprayEvent.update({ where: { id: eventId, tenantId }, data });
+export async function updateSprayEvent(farmId: string, eventId: string, data: UpdateSprayEventInput) {
+  const db = getDb();
+  const [row] = await db.update(sprayEvents).set(data)
+    .where(and(eq(sprayEvents.id, eventId), eq(sprayEvents.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteSprayEvent(tenantId: string, eventId: string) {
-  return db.sprayEvent.delete({ where: { id: eventId, tenantId } });
-}
-
-export async function getActiveWithholdings(tenantId: string) {
-  return db.sprayEvent.findMany({
-    where: {
-      tenantId,
-      withholdingEndDate: { gte: new Date() },
-    },
-    include: {
-      chemical: { select: { name: true } },
-      field: { select: { name: true } },
-    },
-    orderBy: { withholdingEndDate: "asc" },
-  });
+export async function deleteSprayEvent(farmId: string, eventId: string) {
+  const db = getDb();
+  await db.delete(sprayEvents).where(and(eq(sprayEvents.id, eventId), eq(sprayEvents.farmId, farmId)));
 }

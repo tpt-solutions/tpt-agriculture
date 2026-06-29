@@ -1,9 +1,8 @@
-import React from "react";
 import type { ReactNode } from "react";
 
 interface Props {
   label: string;
-  htmlFor: string;
+  htmlFor?: string;
   error?: string;
   hint?: string;
   children: ReactNode;

@@ -66,3 +66,5 @@ export const navConfig: NavItem[] = [
   { label: "Milk Records", href: "/modules/cattle-dairy/milk", icon: "Droplets" },
   { label: "Health Events", href: "/modules/cattle-dairy/health", icon: "HeartPulse" },
 ];
+
+export * from "./service.js";

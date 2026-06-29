@@ -47,3 +47,5 @@ export const navConfig = [
   { label: "Weight Records", href: "/modules/cattle-beef/weights", icon: "Weight" },
   { label: "Drafting", href: "/modules/cattle-beef/drafting", icon: "ArrowRight" },
 ];
+
+export * from "./service.js";

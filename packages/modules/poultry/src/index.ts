@@ -50,3 +50,5 @@ export const navConfig = [
   { label: "Egg Production", href: "/modules/poultry/eggs", icon: "Egg" },
   { label: "Mortality", href: "/modules/poultry/mortality", icon: "HeartPulse" },
 ];
+
+export * from "./service.js";

@@ -7,25 +7,27 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema/index.js",
+      "types": "./dist/schema/index.d.ts"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:generate": "tsx ./node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "tsx ./node_modules/drizzle-kit/bin.cjs migrate"
   },
   "dependencies": {
-    "@prisma/client": "^6.2.1",
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.47.10",
+    "drizzle-orm": "^0.38.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "prisma": "^6.2.1",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.22.4",
     "typescript": "^5.7.3"
   }
 }

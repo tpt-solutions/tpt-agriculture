@@ -1,79 +1,77 @@
-import { db } from "@tpt/core";
-import type {
-  CreateAquaSystemInput, UpdateAquaSystemInput,
-  CreateFishStockInput, UpdateFishStockInput,
-  CreateWaterQualityLogInput, UpdateWaterQualityLogInput,
-  CreateFeedingEventInput, CreatePlantYieldInput,
-} from "./schemas.js";
+import { eq, and, asc, desc } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { aquaSystems, fishStocks, waterQualityLogs, aquaFeedingEvents, aquaPlantYields } from "@tpt/core/schema";
+import type { CreateAquaSystemInput, UpdateAquaSystemInput, CreateFishStockInput, UpdateFishStockInput, CreateWaterQualityLogInput, UpdateWaterQualityLogInput, CreateFeedingEventInput, CreatePlantYieldInput } from "./schemas.js";
 
-export async function listSystems(tenantId: string) {
-  return db.aquaSystem.findMany({
-    where: { tenantId },
-    include: { fishStocks: { orderBy: { stockDate: "desc" }, take: 1 } },
-    orderBy: { name: "asc" },
-  });
+export async function listSystems(farmId: string) {
+  const db = getDb();
+  return db.select().from(aquaSystems).where(eq(aquaSystems.farmId, farmId)).orderBy(asc(aquaSystems.name));
 }
 
-export async function getSystem(tenantId: string, systemId: string) {
-  return db.aquaSystem.findFirst({
-    where: { id: systemId, tenantId },
-    include: {
-      fishStocks: { orderBy: { stockDate: "desc" } },
-      waterQualityLogs: { orderBy: { date: "desc" }, take: 30 },
-      feedingEvents: { orderBy: { date: "desc" }, take: 20 },
-      plantBedYields: { orderBy: { date: "desc" }, take: 20 },
-    },
-  });
+export async function getSystem(farmId: string, systemId: string) {
+  const db = getDb();
+  const [system] = await db.select().from(aquaSystems)
+    .where(and(eq(aquaSystems.id, systemId), eq(aquaSystems.farmId, farmId)))
+    .limit(1);
+  if (!system) return null;
+  const fish = await db.select().from(fishStocks).where(eq(fishStocks.systemId, systemId)).orderBy(desc(fishStocks.stockDate));
+  const water = await db.select().from(waterQualityLogs).where(eq(waterQualityLogs.systemId, systemId)).orderBy(desc(waterQualityLogs.date)).limit(30);
+  const feeding = await db.select().from(aquaFeedingEvents).where(eq(aquaFeedingEvents.systemId, systemId)).orderBy(desc(aquaFeedingEvents.date)).limit(20);
+  const yields = await db.select().from(aquaPlantYields).where(eq(aquaPlantYields.systemId, systemId)).orderBy(desc(aquaPlantYields.date)).limit(20);
+  return { ...system, fishStocks: fish, waterQualityLogs: water, feedingEvents: feeding, plantBedYields: yields };
 }
 
-export async function createSystem(tenantId: string, data: CreateAquaSystemInput) {
-  return db.aquaSystem.create({ data: { ...data, tenantId } });
+export async function createSystem(farmId: string, data: CreateAquaSystemInput) {
+  const db = getDb();
+  const [row] = await db.insert(aquaSystems).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateSystem(tenantId: string, systemId: string, data: UpdateAquaSystemInput) {
-  return db.aquaSystem.update({ where: { id: systemId, tenantId }, data });
+export async function updateSystem(farmId: string, systemId: string, data: UpdateAquaSystemInput) {
+  const db = getDb();
+  const [row] = await db.update(aquaSystems).set(data)
+    .where(and(eq(aquaSystems.id, systemId), eq(aquaSystems.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteSystem(tenantId: string, systemId: string) {
-  return db.aquaSystem.delete({ where: { id: systemId, tenantId } });
+export async function deleteSystem(farmId: string, systemId: string) {
+  const db = getDb();
+  await db.delete(aquaSystems).where(and(eq(aquaSystems.id, systemId), eq(aquaSystems.farmId, farmId)));
 }
 
 export async function createFishStock(data: CreateFishStockInput) {
-  return db.fishStock.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(fishStocks).values(data).returning();
+  return row;
 }
 
 export async function updateFishStock(stockId: string, data: UpdateFishStockInput) {
-  return db.fishStock.update({ where: { id: stockId }, data });
+  const db = getDb();
+  const [row] = await db.update(fishStocks).set(data).where(eq(fishStocks.id, stockId)).returning();
+  return row;
 }
 
 export async function logWaterQuality(data: CreateWaterQualityLogInput) {
-  return db.waterQualityLog.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(waterQualityLogs).values(data).returning();
+  return row;
 }
 
 export async function updateWaterQualityLog(logId: string, data: UpdateWaterQualityLogInput) {
-  return db.waterQualityLog.update({ where: { id: logId }, data });
+  const db = getDb();
+  const [row] = await db.update(waterQualityLogs).set(data).where(eq(waterQualityLogs.id, logId)).returning();
+  return row;
 }
 
 export async function logFeeding(data: CreateFeedingEventInput) {
-  return db.aquaFeedingEvent.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(aquaFeedingEvents).values(data).returning();
+  return row;
 }
 
 export async function logPlantYield(data: CreatePlantYieldInput) {
-  return db.aquaPlantYield.create({ data });
-}
-
-export async function getLatestWaterQuality(tenantId: string) {
-  const systems = await db.aquaSystem.findMany({
-    where: { tenantId },
-    select: { id: true, name: true },
-  });
-  return Promise.all(
-    systems.map(async (s) => {
-      const latest = await db.waterQualityLog.findFirst({
-        where: { systemId: s.id },
-        orderBy: { date: "desc" },
-      });
-      return { system: s, latest };
-    })
-  );
+  const db = getDb();
+  const [row] = await db.insert(aquaPlantYields).values(data).returning();
+  return row;
 }

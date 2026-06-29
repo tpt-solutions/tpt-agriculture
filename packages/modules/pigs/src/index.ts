@@ -51,3 +51,5 @@ export const navConfig = [
   { label: "Litters", href: "/modules/pigs/litters", icon: "Baby" },
   { label: "Feed Records", href: "/modules/pigs/feed", icon: "Wheat" },
 ];
+
+export * from "./service.js";

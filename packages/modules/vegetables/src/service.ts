@@ -1,60 +1,55 @@
-import { db } from "@tpt/core";
+import { eq, and, asc, desc, lte, isNull } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { vegBeds, vegSuccessions } from "@tpt/core/schema";
 import type { CreateVegBedInput, UpdateVegBedInput, CreateVegSuccessionInput, UpdateVegSuccessionInput } from "./schemas.js";
 
-export async function listBeds(tenantId: string) {
-  return db.vegBed.findMany({
-    where: { tenantId },
-    include: {
-      successions: {
-        where: { actualHarvestDate: null },
-        orderBy: { plantDate: "asc" },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
+export async function listBeds(farmId: string) {
+  const db = getDb();
+  return db.select().from(vegBeds).where(eq(vegBeds.farmId, farmId)).orderBy(asc(vegBeds.name));
 }
 
-export async function getBed(tenantId: string, bedId: string) {
-  return db.vegBed.findFirst({
-    where: { id: bedId, tenantId },
-    include: { successions: { orderBy: { plantDate: "desc" } } },
-  });
+export async function getBed(farmId: string, bedId: string) {
+  const db = getDb();
+  const [bed] = await db.select().from(vegBeds)
+    .where(and(eq(vegBeds.id, bedId), eq(vegBeds.farmId, farmId)))
+    .limit(1);
+  if (!bed) return null;
+  const successions = await db.select().from(vegSuccessions).where(eq(vegSuccessions.bedId, bedId)).orderBy(desc(vegSuccessions.plantDate));
+  return { ...bed, successions };
 }
 
-export async function createBed(tenantId: string, data: CreateVegBedInput) {
-  return db.vegBed.create({ data: { ...data, tenantId } });
+export async function createBed(farmId: string, data: CreateVegBedInput) {
+  const db = getDb();
+  const [row] = await db.insert(vegBeds).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateBed(tenantId: string, bedId: string, data: UpdateVegBedInput) {
-  return db.vegBed.update({ where: { id: bedId, tenantId }, data });
+export async function updateBed(farmId: string, bedId: string, data: UpdateVegBedInput) {
+  const db = getDb();
+  const [row] = await db.update(vegBeds).set(data)
+    .where(and(eq(vegBeds.id, bedId), eq(vegBeds.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteBed(tenantId: string, bedId: string) {
-  return db.vegBed.delete({ where: { id: bedId, tenantId } });
+export async function deleteBed(farmId: string, bedId: string) {
+  const db = getDb();
+  await db.delete(vegBeds).where(and(eq(vegBeds.id, bedId), eq(vegBeds.farmId, farmId)));
 }
 
 export async function createSuccession(data: CreateVegSuccessionInput) {
-  return db.vegSuccession.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(vegSuccessions).values(data).returning();
+  return row;
 }
 
 export async function updateSuccession(successionId: string, data: UpdateVegSuccessionInput) {
-  return db.vegSuccession.update({ where: { id: successionId }, data });
+  const db = getDb();
+  const [row] = await db.update(vegSuccessions).set(data).where(eq(vegSuccessions.id, successionId)).returning();
+  return row;
 }
 
 export async function deleteSuccession(successionId: string) {
-  return db.vegSuccession.delete({ where: { id: successionId } });
-}
-
-export async function getUpcomingHarvests(tenantId: string, days = 14) {
-  const until = new Date();
-  until.setDate(until.getDate() + days);
-  return db.vegSuccession.findMany({
-    where: {
-      bed: { tenantId },
-      actualHarvestDate: null,
-      expectedHarvestDate: { lte: until },
-    },
-    include: { bed: { select: { name: true } } },
-    orderBy: { expectedHarvestDate: "asc" },
-  });
+  const db = getDb();
+  await db.delete(vegSuccessions).where(eq(vegSuccessions.id, successionId));
 }

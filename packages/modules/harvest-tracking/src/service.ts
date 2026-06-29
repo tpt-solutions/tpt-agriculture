@@ -1,55 +1,55 @@
-import { db } from "@tpt/core";
+import { eq, and, asc, desc, gte, lte } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { harvestBatches, harvestRecords, fields, plots } from "@tpt/core/schema";
 import type { CreateHarvestBatchInput, UpdateHarvestBatchInput, CreateHarvestRecordInput, UpdateHarvestRecordInput } from "./schemas.js";
 
-export async function listHarvestBatches(tenantId: string) {
-  return db.harvestBatch.findMany({
-    where: { tenantId },
-    include: { records: true, field: { select: { name: true } } },
-    orderBy: { harvestDate: "desc" },
-  });
+export async function listHarvestBatches(farmId: string) {
+  const db = getDb();
+  return db.select().from(harvestBatches).where(eq(harvestBatches.farmId, farmId)).orderBy(desc(harvestBatches.harvestDate));
 }
 
-export async function getHarvestBatch(tenantId: string, batchId: string) {
-  return db.harvestBatch.findFirst({
-    where: { id: batchId, tenantId },
-    include: { records: { include: { plot: true } }, field: true },
-  });
+export async function getHarvestBatch(farmId: string, batchId: string) {
+  const db = getDb();
+  const [batch] = await db.select().from(harvestBatches)
+    .where(and(eq(harvestBatches.id, batchId), eq(harvestBatches.farmId, farmId)))
+    .limit(1);
+  if (!batch) return null;
+  const records = await db.select().from(harvestRecords).where(eq(harvestRecords.batchId, batchId));
+  return { ...batch, records };
 }
 
-export async function createHarvestBatch(tenantId: string, data: CreateHarvestBatchInput) {
-  return db.harvestBatch.create({ data: { ...data, tenantId } });
+export async function createHarvestBatch(farmId: string, data: CreateHarvestBatchInput) {
+  const db = getDb();
+  const [row] = await db.insert(harvestBatches).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateHarvestBatch(tenantId: string, batchId: string, data: UpdateHarvestBatchInput) {
-  return db.harvestBatch.update({ where: { id: batchId, tenantId }, data });
+export async function updateHarvestBatch(farmId: string, batchId: string, data: UpdateHarvestBatchInput) {
+  const db = getDb();
+  const [row] = await db.update(harvestBatches).set(data)
+    .where(and(eq(harvestBatches.id, batchId), eq(harvestBatches.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteHarvestBatch(tenantId: string, batchId: string) {
-  return db.harvestBatch.delete({ where: { id: batchId, tenantId } });
+export async function deleteHarvestBatch(farmId: string, batchId: string) {
+  const db = getDb();
+  await db.delete(harvestBatches).where(and(eq(harvestBatches.id, batchId), eq(harvestBatches.farmId, farmId)));
 }
 
 export async function createHarvestRecord(data: CreateHarvestRecordInput) {
-  return db.harvestRecord.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(harvestRecords).values(data).returning();
+  return row;
 }
 
 export async function updateHarvestRecord(recordId: string, data: UpdateHarvestRecordInput) {
-  return db.harvestRecord.update({ where: { id: recordId }, data });
+  const db = getDb();
+  const [row] = await db.update(harvestRecords).set(data).where(eq(harvestRecords.id, recordId)).returning();
+  return row;
 }
 
 export async function deleteHarvestRecord(recordId: string) {
-  return db.harvestRecord.delete({ where: { id: recordId } });
-}
-
-export async function getYieldSummary(tenantId: string, fromDate: Date, toDate: Date) {
-  const batches = await db.harvestBatch.findMany({
-    where: { tenantId, harvestDate: { gte: fromDate, lte: toDate } },
-    select: { cropVariety: true, totalYieldKg: true, pricePerKg: true },
-  });
-  return batches.reduce<Record<string, { totalKg: number; revenue: number }>>((acc, b) => {
-    const key = b.cropVariety;
-    if (!acc[key]) acc[key] = { totalKg: 0, revenue: 0 };
-    acc[key].totalKg += b.totalYieldKg;
-    if (b.pricePerKg) acc[key].revenue += b.totalYieldKg * b.pricePerKg;
-    return acc;
-  }, {});
+  const db = getDb();
+  await db.delete(harvestRecords).where(eq(harvestRecords.id, recordId));
 }

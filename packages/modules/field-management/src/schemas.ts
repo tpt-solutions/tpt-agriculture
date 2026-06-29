@@ -5,7 +5,7 @@ export const createFieldSchema = z.object({
   areaHa: z.number().positive(),
   soilType: z.string().optional(),
   irrigationZone: z.string().optional(),
-  coordinates: z.unknown().optional(),
+  coordinates: z.record(z.string(), z.unknown()).optional(),
   notes: z.string().optional(),
 });
 

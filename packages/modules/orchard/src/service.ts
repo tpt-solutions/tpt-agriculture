@@ -1,52 +1,68 @@
-import { db } from "@tpt/core";
+import { eq, and, asc, desc } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { orchardBlocks, treeInventory, orchardHarvestBins } from "@tpt/core/schema";
 import type { CreateOrchardBlockInput, UpdateOrchardBlockInput, CreateTreeInventoryInput, UpdateTreeInventoryInput, CreateHarvestBinInput, UpdateHarvestBinInput } from "./schemas.js";
 
-export async function listBlocks(tenantId: string) {
-  return db.orchardBlock.findMany({
-    where: { tenantId },
-    include: { treeInventory: true },
-    orderBy: { name: "asc" },
-  });
+export async function listBlocks(farmId: string) {
+  const db = getDb();
+  return db.select().from(orchardBlocks).where(eq(orchardBlocks.farmId, farmId)).orderBy(asc(orchardBlocks.name));
 }
 
-export async function getBlock(tenantId: string, blockId: string) {
-  return db.orchardBlock.findFirst({
-    where: { id: blockId, tenantId },
-    include: {
-      treeInventory: true,
-      harvestBins: { orderBy: { harvestDate: "desc" }, take: 20 },
-    },
-  });
+export async function getBlock(farmId: string, blockId: string) {
+  const db = getDb();
+  const [block] = await db.select().from(orchardBlocks)
+    .where(and(eq(orchardBlocks.id, blockId), eq(orchardBlocks.farmId, farmId)))
+    .limit(1);
+  if (!block) return null;
+  const inventory = await db.select().from(treeInventory).where(eq(treeInventory.blockId, blockId));
+  const bins = await db.select().from(orchardHarvestBins).where(eq(orchardHarvestBins.blockId, blockId)).orderBy(desc(orchardHarvestBins.harvestDate)).limit(20);
+  return { ...block, treeInventory: inventory, harvestBins: bins };
 }
 
-export async function createBlock(tenantId: string, data: CreateOrchardBlockInput) {
-  return db.orchardBlock.create({ data: { ...data, tenantId } });
+export async function createBlock(farmId: string, data: CreateOrchardBlockInput) {
+  const db = getDb();
+  const [row] = await db.insert(orchardBlocks).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateBlock(tenantId: string, blockId: string, data: UpdateOrchardBlockInput) {
-  return db.orchardBlock.update({ where: { id: blockId, tenantId }, data });
+export async function updateBlock(farmId: string, blockId: string, data: UpdateOrchardBlockInput) {
+  const db = getDb();
+  const [row] = await db.update(orchardBlocks).set(data)
+    .where(and(eq(orchardBlocks.id, blockId), eq(orchardBlocks.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteBlock(tenantId: string, blockId: string) {
-  return db.orchardBlock.delete({ where: { id: blockId, tenantId } });
+export async function deleteBlock(farmId: string, blockId: string) {
+  const db = getDb();
+  await db.delete(orchardBlocks).where(and(eq(orchardBlocks.id, blockId), eq(orchardBlocks.farmId, farmId)));
 }
 
 export async function createTreeInventory(data: CreateTreeInventoryInput) {
-  return db.treeInventory.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(treeInventory).values(data).returning();
+  return row;
 }
 
 export async function updateTreeInventory(inventoryId: string, data: UpdateTreeInventoryInput) {
-  return db.treeInventory.update({ where: { id: inventoryId }, data });
+  const db = getDb();
+  const [row] = await db.update(treeInventory).set(data).where(eq(treeInventory.id, inventoryId)).returning();
+  return row;
 }
 
 export async function createHarvestBin(data: CreateHarvestBinInput) {
-  return db.orchardHarvestBin.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(orchardHarvestBins).values(data).returning();
+  return row;
 }
 
 export async function updateHarvestBin(binId: string, data: UpdateHarvestBinInput) {
-  return db.orchardHarvestBin.update({ where: { id: binId }, data });
+  const db = getDb();
+  const [row] = await db.update(orchardHarvestBins).set(data).where(eq(orchardHarvestBins.id, binId)).returning();
+  return row;
 }
 
 export async function deleteHarvestBin(binId: string) {
-  return db.orchardHarvestBin.delete({ where: { id: binId } });
+  const db = getDb();
+  await db.delete(orchardHarvestBins).where(eq(orchardHarvestBins.id, binId));
 }

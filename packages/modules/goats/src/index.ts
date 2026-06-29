@@ -49,3 +49,5 @@ export const navConfig = [
   { label: "Milk Records", href: "/modules/goats/milk", icon: "Droplets" },
   { label: "Fibre Records", href: "/modules/goats/fibre", icon: "Scissors" },
 ];
+
+export * from "./service.js";

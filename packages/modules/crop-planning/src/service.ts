@@ -1,55 +1,68 @@
-import { db } from "@tpt/core";
+import { eq, and, asc, desc, lte } from "drizzle-orm";
+import { getDb } from "@tpt/core";
+import { cropPlans, plantingTasks, fields } from "@tpt/core/schema";
 import type { CreateCropPlanInput, UpdateCropPlanInput, CreatePlantingTaskInput, UpdatePlantingTaskInput } from "./schemas.js";
 
-export async function listCropPlans(tenantId: string) {
-  return db.cropPlan.findMany({
-    where: { tenantId },
-    include: { plantingTasks: { orderBy: { dueDate: "asc" } } },
-    orderBy: { plannedPlantDate: "asc" },
-  });
+export async function listCropPlans(farmId: string) {
+  const db = getDb();
+  return db.select().from(cropPlans).where(eq(cropPlans.farmId, farmId)).orderBy(asc(cropPlans.plannedPlantDate));
 }
 
-export async function getCropPlan(tenantId: string, planId: string) {
-  return db.cropPlan.findFirst({
-    where: { id: planId, tenantId },
-    include: { plantingTasks: { orderBy: { dueDate: "asc" } }, field: true },
-  });
+export async function getCropPlan(farmId: string, planId: string) {
+  const db = getDb();
+  const [plan] = await db.select().from(cropPlans)
+    .where(and(eq(cropPlans.id, planId), eq(cropPlans.farmId, farmId)))
+    .limit(1);
+  if (!plan) return null;
+  const tasks = await db.select().from(plantingTasks).where(eq(plantingTasks.cropPlanId, planId)).orderBy(asc(plantingTasks.dueDate));
+  const [field] = plan.fieldId
+    ? await db.select().from(fields).where(eq(fields.id, plan.fieldId)).limit(1)
+    : [null];
+  return { ...plan, plantingTasks: tasks, field };
 }
 
-export async function createCropPlan(tenantId: string, data: CreateCropPlanInput) {
-  return db.cropPlan.create({ data: { ...data, tenantId } });
+export async function createCropPlan(farmId: string, data: CreateCropPlanInput) {
+  const db = getDb();
+  const [row] = await db.insert(cropPlans).values({ ...data, farmId }).returning();
+  return row;
 }
 
-export async function updateCropPlan(tenantId: string, planId: string, data: UpdateCropPlanInput) {
-  return db.cropPlan.update({ where: { id: planId, tenantId }, data });
+export async function updateCropPlan(farmId: string, planId: string, data: UpdateCropPlanInput) {
+  const db = getDb();
+  const [row] = await db.update(cropPlans).set(data)
+    .where(and(eq(cropPlans.id, planId), eq(cropPlans.farmId, farmId)))
+    .returning();
+  return row;
 }
 
-export async function deleteCropPlan(tenantId: string, planId: string) {
-  return db.cropPlan.delete({ where: { id: planId, tenantId } });
+export async function deleteCropPlan(farmId: string, planId: string) {
+  const db = getDb();
+  await db.delete(cropPlans).where(and(eq(cropPlans.id, planId), eq(cropPlans.farmId, farmId)));
 }
 
 export async function createPlantingTask(data: CreatePlantingTaskInput) {
-  return db.plantingTask.create({ data });
+  const db = getDb();
+  const [row] = await db.insert(plantingTasks).values(data).returning();
+  return row;
 }
 
 export async function updatePlantingTask(taskId: string, data: UpdatePlantingTaskInput) {
-  return db.plantingTask.update({ where: { id: taskId }, data });
+  const db = getDb();
+  const [row] = await db.update(plantingTasks).set(data).where(eq(plantingTasks.id, taskId)).returning();
+  return row;
 }
 
 export async function deletePlantingTask(taskId: string) {
-  return db.plantingTask.delete({ where: { id: taskId } });
+  const db = getDb();
+  await db.delete(plantingTasks).where(eq(plantingTasks.id, taskId));
 }
 
-export async function listUpcomingTasks(tenantId: string, days = 14) {
+export async function listUpcomingTasks(farmId: string, days = 14) {
+  const db = getDb();
   const until = new Date();
   until.setDate(until.getDate() + days);
-  return db.plantingTask.findMany({
-    where: {
-      cropPlan: { tenantId },
-      completedDate: null,
-      dueDate: { lte: until },
-    },
-    include: { cropPlan: true },
-    orderBy: { dueDate: "asc" },
-  });
+  return db.select().from(plantingTasks)
+    .innerJoin(cropPlans, eq(plantingTasks.cropPlanId, cropPlans.id))
+    .where(and(eq(cropPlans.farmId, farmId), lte(plantingTasks.dueDate, until)))
+    .orderBy(asc(plantingTasks.dueDate));
 }

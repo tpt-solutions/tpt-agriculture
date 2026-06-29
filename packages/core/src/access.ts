@@ -1,52 +1,38 @@
-import type { Subscription } from "@prisma/client";
-import { db } from "./db.js";
-import { BUNDLE_MODULES } from "./config/bundle-modules.js";
+import type { FarmRole } from "./schema/farm.js";
 
-const cache = new Map<string, { moduleIds: string[]; cachedAt: number }>();
-const CACHE_TTL_MS = 60_000;
+const WRITE_ROLES: FarmRole[] = ["OWNER", "ADMIN", "MEMBER"];
+const ADMIN_ROLES: FarmRole[] = ["OWNER", "ADMIN"];
 
 /**
- * Returns the list of moduleIds accessible to the tenant based on their
- * active/trialing subscription. Returns [] if no active subscription.
+ * Returns the moduleIds accessible to this user based on their role.
+ * All modules are accessible to OWNER, ADMIN, MEMBER. READONLY gets read-only access.
+ * The BUNDLE_MODULES mapping is used only for feature-gating (e.g. hiding modules the
+ * farm hasn't set up yet), not for licensing.
  */
-export async function getAccessibleModules(tenantId: string): Promise<string[]> {
-  const cached = cache.get(tenantId);
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) return cached.moduleIds;
-
-  const sub = await db.subscription.findFirst({
-    where: { tenantId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!sub || !isSubscriptionActive(sub)) {
-    cache.set(tenantId, { moduleIds: [], cachedAt: Date.now() });
-    return [];
+export function getAccessibleModules(role: FarmRole, enabledModuleIds: string[]): string[] {
+  if (role === "READONLY" || WRITE_ROLES.includes(role)) {
+    return enabledModuleIds;
   }
-
-  const moduleIds = BUNDLE_MODULES[sub.bundleTier] ?? [];
-  cache.set(tenantId, { moduleIds, cachedAt: Date.now() });
-  return moduleIds;
+  return [];
 }
 
 /**
- * Throws a 402-style error if the tenant's active subscription does not
- * cover the requested moduleId.
+ * Throws if the module is not in the farm's enabled module list.
  */
-export async function assertModuleAccess(moduleId: string, tenantId: string): Promise<void> {
-  const modules = await getAccessibleModules(tenantId);
-  if (!modules.includes(moduleId)) {
-    const err = new Error(`Module '${moduleId}' is not included in your current subscription`);
-    (err as NodeJS.ErrnoException).code = "MODULE_NOT_LICENCED";
+export function assertModuleAccess(moduleId: string, enabledModuleIds: string[]): void {
+  if (!enabledModuleIds.includes(moduleId)) {
+    const err = new Error(`Module '${moduleId}' is not enabled for this farm`);
+    (err as NodeJS.ErrnoException).code = "MODULE_NOT_ENABLED";
     throw err;
   }
 }
 
-/** Clears the cache entry for a tenant — call after a subscription change webhook. */
-export function invalidateAccessCache(tenantId: string): void {
-  cache.delete(tenantId);
+/** Returns true if the role can create/edit/delete records. */
+export function canWrite(role: FarmRole): boolean {
+  return WRITE_ROLES.includes(role);
 }
 
-export function isSubscriptionActive(sub: Pick<Subscription, "status" | "currentPeriodEnd">): boolean {
-  if (sub.status !== "ACTIVE" && sub.status !== "TRIALING") return false;
-  return sub.currentPeriodEnd > new Date();
+/** Returns true if the role can manage users and farm settings. */
+export function canAdmin(role: FarmRole): boolean {
+  return ADMIN_ROLES.includes(role);
 }

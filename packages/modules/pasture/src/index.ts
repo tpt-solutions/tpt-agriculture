@@ -47,3 +47,5 @@ export const navConfig = [
   { label: "Rotations", href: "/modules/pasture/rotations", icon: "RefreshCw" },
   { label: "Cover Records", href: "/modules/pasture/cover", icon: "Ruler" },
 ];
+
+export * from "./service.js";

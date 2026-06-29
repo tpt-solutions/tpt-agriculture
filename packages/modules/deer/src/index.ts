@@ -50,3 +50,5 @@ export const navConfig = [
   { label: "Velvet Harvests", href: "/modules/deer/velvet", icon: "Award" },
   { label: "Venison", href: "/modules/deer/venison", icon: "Beef" },
 ];
+
+export * from "./service.js";

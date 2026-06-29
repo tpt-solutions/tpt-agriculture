@@ -62,3 +62,5 @@ export const navConfig = [
   { label: "Drenching", href: "/modules/sheep/drenching", icon: "Syringe" },
   { label: "Shearing", href: "/modules/sheep/shearing", icon: "Scissors" },
 ];
+
+export * from "./service.js";

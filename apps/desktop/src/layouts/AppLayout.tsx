@@ -41,6 +41,8 @@ export function AppLayout() {
   const links: SidebarLink[] = [
     ...NAV_LINKS,
     { label: "Users", href: "/settings/users" },
+    { label: "Backup", href: "/settings/backup" },
+    { label: "Restore", href: "/settings/restore" },
   ];
 
   return (

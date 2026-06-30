@@ -29,7 +29,7 @@ export function SetupPage() {
         password,
       });
       setUser(user);
-      navigate("/", { replace: true });
+      navigate("/recovery-phrase", { replace: true });
     } catch (err: any) {
       setError(err.message ?? "Setup failed");
     } finally {

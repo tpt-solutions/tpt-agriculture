@@ -5,6 +5,7 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "sql:default"
+    "sql:default",
+    "stronghold:default"
   ]
 }

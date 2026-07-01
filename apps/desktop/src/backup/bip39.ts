@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 const BIP39_ENGLISH: string[] = [
   "abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse",
   "access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act",
@@ -279,3 +280,4 @@ function bitsToBytes(bits: number[]): Uint8Array {
   }
   return bytes;
 }
+

@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -109,3 +110,4 @@ export function SetupPage() {
     </div>
   );
 }
+

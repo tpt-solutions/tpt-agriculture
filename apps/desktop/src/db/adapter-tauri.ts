@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { RemoteCallback } from "drizzle-orm/sqlite-proxy";
@@ -37,3 +38,4 @@ const callback: RemoteCallback = async (sql, params, method) => {
 };
 
 export const tptDb = drizzle(callback, { schema });
+

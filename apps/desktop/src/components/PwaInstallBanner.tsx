@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from "react";
 import { Button } from "@tpt/ui";
 
@@ -59,3 +60,4 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
+

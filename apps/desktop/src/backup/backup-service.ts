@@ -1,11 +1,39 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { retrieveBackupKey } from "./keygen.js";
 import { stringToMnemonic, mnemonicToEntropy } from "./bip39.js";
 
 const BACKUP_API = "https://backup.tptsolutions.co.nz";
 
+/**
+ * Derive an HMAC token from the encryption key for API authentication.
+ * Uses the first 16 bytes of the key hashed with SHA-256 for the HMAC secret.
+ */
+async function deriveHmacToken(farmId: string, key: Uint8Array): Promise<string> {
+  // Import the key as a raw HMAC key
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    key.slice(0, 16), // Use first 16 bytes as HMAC secret
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  // Sign the farmId to create a token
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(farmId));
+  const hashArray = Array.from(new Uint8Array(sig));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Create AES-GCM additional authenticated data from farmId.
+ */
+function createAad(farmId: string): ArrayBuffer {
+  return new TextEncoder().encode(farmId).buffer;
+}
+
 // ─── Export / Encrypt ────────────────────────────────────────────────────────
 
-export async function exportEncryptedBackup(_farmId: string): Promise<Blob> {
+export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
   const db = await getDb();
   const allTables = [
     "users", "sessions", "farms", "farm_users",
@@ -43,16 +71,19 @@ export async function exportEncryptedBackup(_farmId: string): Promise<Blob> {
   if (!key) throw new Error("No encryption key found. Set up backup first.");
 
   const iv = crypto.getRandomValues(new Uint8Array(12));
+  const aad = createAad(farmId);
   const cryptoKey = await importAesKey(key);
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv, additionalData: aad },
     cryptoKey,
     plaintext,
   );
 
-  const envelope = new Uint8Array(4 + iv.length + encrypted.byteLength);
+  // Envelope format: version(1) + aadLen(1) + ivLen(1) + iv + ciphertext
+  const envelope = new Uint8Array(1 + 1 + 1 + iv.length + encrypted.byteLength);
   envelope[0] = 1; // version
-  envelope[1] = iv.length;
+  envelope[1] = aad.byteLength; // aad length
+  envelope[2] = iv.length; // iv length
   envelope.set(iv, 4);
   envelope.set(new Uint8Array(encrypted), 4 + iv.length);
 
@@ -61,21 +92,29 @@ export async function exportEncryptedBackup(_farmId: string): Promise<Blob> {
 
 // ─── Import / Decrypt ────────────────────────────────────────────────────────
 
-export async function importEncryptedBackup(data: Uint8Array, passphrase: string): Promise<void> {
+export async function importEncryptedBackup(data: Uint8Array, passphrase: string, farmId: string): Promise<void> {
   const entropy = mnemonicToEntropy(stringToMnemonic(passphrase));
   const version = data[0];
   if (version !== 1) throw new Error(`Unsupported backup version: ${version}`);
 
-  const ivLen = data[1];
-  const iv = data.slice(4, 4 + ivLen);
-  const ciphertext = data.slice(4 + ivLen);
+  const aadLen = data[1]; // AAD length (currently unused but reserved)
+  const ivLen = data[2];
+  const iv = data.slice(3 + aadLen, 3 + aadLen + ivLen);
+  const ciphertext = data.slice(3 + aadLen + ivLen);
 
+  const aad = createAad(farmId);
   const cryptoKey = await importAesKey(entropy);
-  const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    cryptoKey,
-    ciphertext,
-  );
+  
+  let plaintext: ArrayBuffer;
+  try {
+    plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv, additionalData: aad },
+      cryptoKey,
+      ciphertext,
+    );
+  } catch (e) {
+    throw new Error("Decryption failed. The backup may not belong to this farm.");
+  }
 
   const snapshot: Record<string, unknown[]> = JSON.parse(
     new TextDecoder().decode(plaintext),
@@ -107,12 +146,20 @@ export async function importEncryptedBackup(data: Uint8Array, passphrase: string
 // ─── Upload to backup server ─────────────────────────────────────────────────
 
 export async function uploadBackup(blob: Blob, farmId: string): Promise<{ backupId: string }> {
+  const key = await retrieveBackupKey();
+  if (!key) throw new Error("No encryption key found");
+  
+  const hmacToken = await deriveHmacToken(farmId, key);
+  
   const formData = new FormData();
   formData.append("backup", blob, `backup-${farmId}-${Date.now()}.bin`);
   formData.append("farmId", farmId);
 
   const resp = await fetch(`${BACKUP_API}/upload`, {
     method: "POST",
+    headers: {
+      "Authorization": `HMAC ${hmacToken}`,
+    },
     body: formData,
   });
 
@@ -123,7 +170,16 @@ export async function uploadBackup(blob: Blob, farmId: string): Promise<{ backup
 // ─── Download backup list ────────────────────────────────────────────────────
 
 export async function listBackups(farmId: string): Promise<BackupMeta[]> {
-  const resp = await fetch(`${BACKUP_API}/list?farmId=${encodeURIComponent(farmId)}`);
+  const key = await retrieveBackupKey();
+  if (!key) throw new Error("No encryption key found");
+  
+  const hmacToken = await deriveHmacToken(farmId, key);
+  
+  const resp = await fetch(`${BACKUP_API}/list?farmId=${encodeURIComponent(farmId)}`, {
+    headers: {
+      "Authorization": `HMAC ${hmacToken}`,
+    },
+  });
   if (!resp.ok) throw new Error(`Failed to list backups: ${resp.statusText}`);
   return resp.json();
 }

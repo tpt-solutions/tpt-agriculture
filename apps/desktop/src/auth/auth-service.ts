@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { getDb } from "@tpt/core";
@@ -34,7 +35,7 @@ export async function createFarmSetup(data: {
   email: string;
   password: string;
 }): Promise<CurrentUser> {
-  const db = getDb();
+  const db = await getDb();
   const passwordHash = await bcrypt.hash(data.password, 10);
 
   const userId = crypto.randomUUID();
@@ -78,7 +79,7 @@ export async function login(
   email: string,
   password: string
 ): Promise<CurrentUser> {
-  const db = getDb();
+  const db = await getDb();
   const [user] = await db
     .select()
     .from(users)
@@ -123,7 +124,7 @@ async function createSession(
   name: string,
   email: string
 ): Promise<CurrentUser> {
-  const db = getDb();
+  const db = await getDb();
   const sessionId = crypto.randomUUID();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
@@ -144,7 +145,7 @@ export async function validateSession(): Promise<CurrentUser | null> {
   const sessionId = getStoredSessionId();
   if (!sessionId) return null;
 
-  const db = getDb();
+  const db = await getDb();
   const [session] = await db
     .select()
     .from(sessions)
@@ -197,14 +198,29 @@ export async function validateSession(): Promise<CurrentUser | null> {
 export async function logout() {
   const sessionId = getStoredSessionId();
   if (sessionId) {
-    const db = getDb();
+    const db = await getDb();
     await db.delete(sessions).where(eq(sessions.id, sessionId));
   }
   clearStoredSession();
 }
 
 export async function hasAnyFarms(): Promise<boolean> {
-  const db = getDb();
+  const db = await getDb();
   const [farm] = await db.select().from(farms).limit(1);
   return !!farm;
+}
+
+export async function verifyPassword(
+  email: string,
+  password: string
+): Promise<boolean> {
+  const db = await getDb();
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(1);
+
+  if (!user) return false;
+  return bcrypt.compare(password, user.passwordHash);
 }

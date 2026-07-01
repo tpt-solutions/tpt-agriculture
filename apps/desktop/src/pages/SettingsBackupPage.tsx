@@ -1,10 +1,13 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
 import { Button } from "@tpt/ui";
 import { Input } from "@tpt/ui";
 import { FormField } from "@tpt/ui";
+import { toast } from "sonner";
 import { useAuth } from "../auth/AuthContext.js";
+import { verifyPassword } from "../auth/auth-service.js";
 import { retrieveBackupKey } from "../backup/keygen.js";
 import { entropyToMnemonic, mnemonicToString } from "../backup/bip39.js";
 import { exportEncryptedBackup, uploadBackup, listBackups } from "../backup/backup-service.js";
@@ -30,6 +33,10 @@ export function SettingsBackupPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backups", user?.farmId] });
+      toast.success("Backup uploaded successfully");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Backup upload failed");
     },
   });
 
@@ -37,6 +44,17 @@ export function SettingsBackupPage() {
     e.preventDefault();
     setPassError("");
     setPhraseWords("");
+
+    if (!user) {
+      setPassError("Not logged in.");
+      return;
+    }
+
+    const valid = await verifyPassword(user.email, password);
+    if (!valid) {
+      setPassError("Incorrect password.");
+      return;
+    }
 
     try {
       const key = await retrieveBackupKey();

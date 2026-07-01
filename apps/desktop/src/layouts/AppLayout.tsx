@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { Outlet, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext.js";
 import { logout } from "../auth/auth-service.js";

@@ -1,3 +1,5 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
+
 export interface ColumnDef {
   key: string;
   label: string;
@@ -21,6 +23,7 @@ export interface ModuleAdapter {
   columns: ColumnDef[];
   formFields: FormFieldDef[];
   list(farmId: string): Promise<Record<string, unknown>[]>;
+  count?(farmId: string): Promise<number>;
   get?(farmId: string, id: string): Promise<Record<string, unknown> | null>;
   create?(farmId: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
   update?(farmId: string, id: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;

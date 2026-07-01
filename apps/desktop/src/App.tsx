@@ -1,5 +1,7 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 import { AuthProvider, RequireAuth } from "./auth/index.js";
 import { LoginPage } from "./auth/LoginPage.js";
 import { SetupPage } from "./auth/SetupPage.js";
@@ -43,6 +45,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
         <PwaInstallBanner />
+        <Toaster position="top-right" richColors closeButton />
       </AuthProvider>
     </QueryClientProvider>
   );

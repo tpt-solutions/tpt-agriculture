@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://backup.tptsolutions.co.nz https://api.open-meteo.com https://api.bom.gov.au https://api.weather.gov https://api.metoffice.gov.uk; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     }
   },
   "bundle": {

@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { entropyToMnemonic, mnemonicToEntropy, stringToMnemonic } from "./bip39.js";
 
 function isTauri(): boolean {
@@ -120,3 +121,4 @@ function base64ToUint8(base64: string): Uint8Array {
   }
   return bytes;
 }
+

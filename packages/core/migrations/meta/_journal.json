@@ -8,6 +8,13 @@
       "when": 1782528016255,
       "tag": "0000_outstanding_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782881586491,
+      "tag": "0001_cloudy_frog_thor",
+      "breakpoints": true
     }
   ]
 }

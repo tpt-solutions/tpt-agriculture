@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { CurrentUser } from "./auth-service.js";
@@ -35,3 +36,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+

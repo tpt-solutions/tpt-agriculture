@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { users } from "./identity.js";
 
 export const farms = sqliteTable("farms", {
@@ -7,6 +7,9 @@ export const farms = sqliteTable("farms", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   countryProfile: text("country_profile").notNull().default("nz"),
+  lat: real("lat"),
+  lon: real("lon"),
+  settingsJson: text("settings_json", { mode: "json" }).$type<Record<string, unknown>>(),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

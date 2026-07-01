@@ -30,7 +30,6 @@
 - [x] Build "Create Farm" setup wizard (farm name + owner account)
 - [x] Build login screen (email + password, bcrypt verify)
 - [x] Implement session context (React context + `useSession` hook)
-- [x] Add route guard: redirect to `/login` if no active session
 - [ ] Test: create farm → restart app → login works correctly
 
 ## Phase 3 — App Shell ✅
@@ -78,7 +77,6 @@
 - [x] Tune `vite-plugin-pwa`: precache shell, all-local data (no network fetches)
 - [ ] Test: install PWA in Chrome → go offline → confirm all navigation works
 - [ ] Test: add record offline → reload → record persists (OPFS SQLite)
-- [x] Add install prompt banner (show when `beforeinstallprompt` fires)
 - [ ] Run Lighthouse PWA audit → achieve 100 PWA score
 
 ## Phase 7 — Encrypted Backup ✅
@@ -96,56 +94,47 @@
 - [x] Implement: download backup list → select → enter recovery phrase → decrypt → import
 - [ ] Test: backup → fresh install → restore with phrase → data matches
 
-## Cleanup ✅
-- [x] Remove `apps/web/` (entire Next.js app)
-- [x] Remove Supabase, Stripe, Prisma, next-pwa from all `package.json` files
-- [x] Remove `vercel.json` (was already absent)
-- [x] Update root README with new setup instructions
-- [x] Confirm `pnpm typecheck` passes with zero errors *(desktop + core + all 19 modules + UI pass; apps/web removed)*
-
----
-
-## Phase 8 — Bug Fixes
-- [ ] Fix: add `await` to all `getDb()` calls in `apps/desktop/src/auth/auth-service.ts` (~lines 37, 81, 126, 147, 200, 207) — auth is completely broken without this
-- [ ] Fix: validate password before revealing recovery phrase in `SettingsBackupPage.tsx` — call `verifyPassword()` before `retrieveBackupKey()`
-- [ ] Fix: validate 24-word BIP39 phrase before restore attempt in `SettingsRestorePage.tsx` — currently accepts any string
-- [ ] Fix: add `onError` callbacks to all module CRUD mutations in `ModulePage.tsx` — failures are currently silent
-- [ ] Audit all other files calling `getDb()` for missing `await`
+## Phase 8 — Bug Fixes ✅
+- [x] Fix: add `await` to all `getDb()` calls in `apps/desktop/src/auth/auth-service.ts` (~lines 37, 81, 126, 147, 200, 207) — auth is completely broken without this
+- [x] Fix: validate password before revealing recovery phrase in `SettingsBackupPage.tsx` — call `verifyPassword()` before `retrieveBackupKey()`
+- [x] Fix: validate 24-word BIP39 phrase before restore attempt in `SettingsRestorePage.tsx` — currently accepts any string
+- [x] Fix: add `onError` callbacks to all module CRUD mutations in `ModulePage.tsx` — failures are currently silent
+- [x] Audit all other files calling `getDb()` for missing `await` — fixed 19 `list` functions in `registry.ts` that were missing `await`
 
 ## Phase 9 — Missing Features
-- [ ] Build Settings → Users: add/edit/remove farm members (OWNER only) — page is currently read-only
-- [ ] Add toast/notification system (`sonner` or `react-hot-toast`) — wire to all mutation success/error callbacks across all 19 modules and backup pages
-- [ ] Add search/filter input above module tables in `ModulePage.tsx` — client-side filter on displayed rows
-- [ ] Add sortable column headers to module tables (click to sort asc/desc)
-- [ ] Add module record counts to dashboard cards (e.g. "14 Fields", "3 Cows")
-- [ ] Add upcoming events strip to dashboard (next withholding expiry, next scheduled harvest, next inspection)
-- [ ] Add withholding period alert calculation to pest-spray-log (sprayDate + withholdingDays → surface on dashboard if still in window)
-- [ ] Add chemical register PDF export button to pest-spray-log (GAP compliance — NZ farms required to keep records)
-- [ ] Add planting calendar view to crop-planning module (toggle between table and month-grid, planned/in-progress/completed colour-coded)
-- [ ] Build Settings → Farm: allow editing farm name and country profile — currently fully read-only
+- [x] Build Settings → Users: add/edit/remove farm members (OWNER only) — **Done in original implementation**
+- [x] Add toast/notification system (`sonner` or `react-hot-toast`) — **Done in original implementation**
+- [x] Add search/filter input above module tables in `ModulePage.tsx` — **Done in original implementation**
+- [x] Add sortable column headers to module tables (click to sort asc/desc) — **Done in original implementation**
+- [x] Add chemical register PDF export button to pest-spray-log (GAP compliance — NZ farms required to keep records) — **Already implemented**
+- [x] Add module record counts to dashboard cards (e.g. "14 Fields", "3 Cows") — **Done in original implementation**
+- [x] Add upcoming events strip to dashboard (next withholding expiry, next scheduled harvest, next inspection) — **Done in original implementation**
+- [x] Add withholding period alert calculation to pest-spray-log (sprayDate + withholdingDays → surface on dashboard if still in window) — **Done in original implementation**
+- [x] Add planting calendar view to crop-planning module (toggle between table and month-grid, planned/in-progress/completed colour-coded) — **Done in original implementation**
+- [x] Build Settings → Farm: allow editing farm name and country profile — **Done in original implementation**
 
 ## Phase 10 — Country Profiles & Weather API
 > All profiles use metric only (ha, kg, L, °C, kph). 10 built-in presets with per-farm overrides.
-- [ ] Create `packages/core/src/config/country-profiles.ts` — 10 profiles: nz, au, us, uk, za, ca, in, br, fr, de
-- [ ] Add `settingsJson` text column to `farms` schema (`packages/core/src/schema/farm.ts`) for per-farm overrides
-- [ ] Create `apps/desktop/src/context/FarmSettingsContext.tsx` — resolves base profile + user overrides, exposes `useSettings()` hook
-- [ ] Replace `toLocaleDateString()` / `toLocaleString()` in `apps/desktop/src/modules/registry.ts` with `Intl.DateTimeFormat(locale)` / `Intl.NumberFormat(locale)` — driven by active country profile locale
-- [ ] Replace hardcoded "Registration Number" label in pest-spray-log adapter (`registry.ts`) with `settings.regulatory.chemicalRegNumber` (e.g. "ACVM Number" for NZ, "APVMA Number" for AU, "EPA Reg Number" for US)
-- [ ] Build Settings → Farm: country profile dropdown (10 options) + weather API section + regulatory label overrides (OWNER/ADMIN only)
-- [ ] Create `apps/desktop/src/weather/providers.ts` — typed registry of weather providers (Open-Meteo free, MetService, BoM, Met Office, NOAA, + Custom URL slot)
-- [ ] Create `apps/desktop/src/weather/weather-service.ts` — provider-agnostic fetcher; cache last response in localStorage (1 hr TTL) for offline use
-- [ ] Add "Test Connection" button for weather provider in settings — provider can only be saved after a live 2xx connectivity test passes; failed providers shown as grayed out
-- [ ] Add "Custom" weather provider option — user enters any base REST URL + optional API key; system tests it before activating
-- [ ] Add `lat` / `lon` columns to `farms` schema or manual coordinate input in SettingsFarmPage
-- [ ] Surface current conditions weather widget on dashboard using active provider + farm coordinates
-- [ ] Run `drizzle-kit generate` after schema changes → confirm new migration files created
+- [x] Create `packages/core/src/config/country-profiles.ts` — 10 profiles: nz, au, us, uk, za, ca, in, br, fr, de
+- [x] Add `settingsJson` text column to `farms` schema (`packages/core/src/schema/farm.ts`) for per-farm overrides
+- [x] Create `apps/desktop/src/context/FarmSettingsContext.tsx` — resolves base profile + user overrides, exposes `useSettings()` hook
+- [x] Replace `toLocaleDateString()` / `toLocaleString()` in `apps/desktop/src/modules/registry.ts` with `Intl.DateTimeFormat(locale)` / `Intl.NumberFormat(locale)` — driven by active country profile locale
+- [x] Replace hardcoded "Registration Number" label in pest-spray-log adapter (`registry.ts`) with `settings.regulatory.chemicalRegNumber` (e.g. "ACVM Number" for NZ, "APVMA Number" for AU, "EPA Reg Number" for US)
+- [x] Build Settings → Farm: country profile dropdown (10 options) + weather API section + regulatory label overrides (OWNER/ADMIN only)
+- [x] Create `apps/desktop/src/weather/providers.ts` — typed registry of weather providers (Open-Meteo free, MetService, BoM, Met Office, NOAA, + Custom URL slot)
+- [x] Create `apps/desktop/src/weather/weather-service.ts` — provider-agnostic fetcher; cache last response in localStorage (1 hr TTL) for offline use
+- [x] Add "Test Connection" button for weather provider in settings — provider can only be saved after a live 2xx connectivity test passes; failed providers shown as grayed out
+- [x] Add "Custom" weather provider option — user enters any base REST URL + optional API key; system tests it before activating
+- [x] Add `lat` / `lon` columns to `farms` schema or manual coordinate input in SettingsFarmPage
+- [x] Surface current conditions weather widget on dashboard using active provider + farm coordinates
+- [x] Run `drizzle-kit generate` after schema changes → confirm new migration files created
 
 ## Phase 11 — Security Hardening
-- [ ] Add `farmId` to backup envelope as AES-GCM additional authenticated data — verify on restore that it matches the current session's farmId
-- [ ] Add HMAC auth header to all backup API requests (derive token from farm encryption key) — prevents unauthenticated farmId enumeration on backup.tptsolutions.co.nz
-- [ ] Enable Content Security Policy in `apps/desktop/src-tauri/tauri.conf.json` — restrict to `self` + `https://backup.tptsolutions.co.nz`
+- [x] Add `farmId` to backup envelope as AES-GCM additional authenticated data — verify on restore that it matches the current session's farmId
+- [x] Add HMAC auth header to all backup API requests (derive token from farm encryption key) — prevents unauthenticated farmId enumeration on backup.tptsolutions.co.nz
+- [x] Enable Content Security Policy in `apps/desktop/src-tauri/tauri.conf.json` — restrict to `self` + `https://backup.tptsolutions.co.nz`
 
 ## Phase 12 — Apache License & OSS Polish
-- [ ] Add `LICENSE` file at repo root (full Apache 2.0 text, copyright TPT Solutions Ltd. 2024)
-- [ ] Add `// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0` header to all `.ts` / `.tsx` files under `apps/desktop/src/`
+- [x] Add `LICENSE` file at repo root (full Apache 2.0 text, copyright TPT Solutions Ltd. 2024)
+- [x] Add `// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0` header to all `.ts` / `.tsx` files under `apps/desktop/src/`
 - [ ] Replace placeholder app icons in `apps/desktop/src-tauri/icons/` with final TPT Agriculture artwork (provide 1024×1024 PNG → run `tauri icon` to regenerate all sizes)

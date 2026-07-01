@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import type { ReactNode } from "react";
 import { Navigate } from "react-router";
 import { useAuth } from "./AuthContext.js";
@@ -19,3 +20,4 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   return <>{children}</>;
 }
+

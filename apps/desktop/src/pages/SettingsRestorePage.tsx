@@ -1,9 +1,11 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
 import { Button } from "@tpt/ui";
 import { FormField } from "@tpt/ui";
+import { toast } from "sonner";
 import { useAuth } from "../auth/AuthContext.js";
 import { importEncryptedBackup, listBackups, downloadBackup } from "../backup/backup-service.js";
 
@@ -21,11 +23,24 @@ export function SettingsRestorePage() {
     enabled: !!user,
   });
 
+  // Validate BIP39 phrase format before attempting restore
+  function validatePhrase(phrase: string): boolean {
+    const words = phrase.trim().split(/\s+/);
+    if (words.length !== 24) {
+      throw new Error("Recovery phrase must have exactly 24 words");
+    }
+    // Additional validation is done in stringToMnemonic which checks for valid BIP39 words
+    return true;
+  }
+
   async function handleRestore(file: File | null, cloudBackupId?: string) {
     setError("");
     setLoading(true);
 
     try {
+      // Validate the recovery phrase before attempting restore
+      validatePhrase(passphrase);
+
       let data: Uint8Array;
 
       if (cloudBackupId) {
@@ -39,10 +54,14 @@ export function SettingsRestorePage() {
         return;
       }
 
-      await importEncryptedBackup(data, passphrase);
+      // Import backup with farmId as AAD for security
+      await importEncryptedBackup(data, passphrase, user!.farmId);
+      toast.success("Backup restored successfully");
       navigate("/", { replace: true });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Restore failed. Check your recovery phrase.");
+      const msg = err instanceof Error ? err.message : "Restore failed. Check your recovery phrase.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

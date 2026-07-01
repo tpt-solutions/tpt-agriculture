@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import SQLiteESMFactory from "wa-sqlite/dist/wa-sqlite-async.mjs";
 // @ts-ignore - JS module without types
 import { OriginPrivateFileSystemVFS } from "wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js";
@@ -75,3 +76,4 @@ const callback: RemoteCallback = async (sql, params, method) => {
 };
 
 export const tptDb = drizzle(callback, { schema });
+

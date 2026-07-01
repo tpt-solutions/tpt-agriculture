@@ -1,3 +1,4 @@
+// Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@tpt/ui";
@@ -96,3 +97,4 @@ export function RecoveryPhrasePage() {
     </div>
   );
 }
+

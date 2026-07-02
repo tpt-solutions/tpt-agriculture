@@ -1,4 +1,5 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
+import { sql } from "drizzle-orm";
 import { retrieveBackupKey } from "./keygen.js";
 import { stringToMnemonic, mnemonicToEntropy } from "./bip39.js";
 
@@ -36,7 +37,7 @@ function createAad(farmId: string): ArrayBuffer {
 export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
   const db = await getDb();
   const allTables = [
-    "users", "sessions", "farms", "farm_users",
+    "farms",
     "fields", "plots", "crop_plans", "planting_tasks",
     "harvest_batches", "harvest_records", "chemicals", "spray_events",
     "vit_blocks", "vintage_records", "canopy_notes",
@@ -54,13 +55,26 @@ export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
     "poultry_flocks", "poultry_egg_records", "poultry_mortality",
     "bee_hives", "bee_inspections", "bee_honey_harvests",
     "paddocks", "paddock_rotations", "pasture_cover_records",
+    "custom_options",
+    "ledger_entries", "input_prices", "output_prices",
+    "soil_tests",
+    "inventory_items", "inventory_movements",
+    "equipment_assets",
+    "compliance_checks",
+    "staff_members",
   ];
 
   const snapshot: Record<string, unknown[]> = {};
   for (const table of allTables) {
     try {
-      const rows = await db.all(`SELECT * FROM "${table}"`);
-      snapshot[table] = rows;
+      // Raw `db.all()` queries have no field metadata, so drizzle returns
+      // positional arrays rather than column-keyed objects — look up the
+      // column order via PRAGMA so the snapshot stores real column names
+      // (needed for `importEncryptedBackup` to rebuild INSERT statements).
+      const columnInfo = (await db.all(sql`PRAGMA table_info(${sql.identifier(table)})`)) as unknown[][];
+      const columns = columnInfo.map((col) => String(col[1]));
+      const rawRows = (await db.all(sql`SELECT * FROM ${sql.identifier(table)}`)) as unknown[][];
+      snapshot[table] = rawRows.map((row) => Object.fromEntries(columns.map((c, i) => [c, row[i]])));
     } catch {
       snapshot[table] = [];
     }
@@ -79,13 +93,14 @@ export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
     plaintext,
   );
 
-  // Envelope format: version(1) + aadLen(1) + ivLen(1) + iv + ciphertext
-  const envelope = new Uint8Array(1 + 1 + 1 + iv.length + encrypted.byteLength);
+  // Envelope format: version(1) + ivLen(1) + iv + ciphertext
+  // (AAD itself is never stored — only used at encrypt/decrypt time, recomputed
+  // from farmId on import — so no aadLen byte is needed in the header.)
+  const envelope = new Uint8Array(1 + 1 + iv.length + encrypted.byteLength);
   envelope[0] = 1; // version
-  envelope[1] = aad.byteLength; // aad length
-  envelope[2] = iv.length; // iv length
-  envelope.set(iv, 4);
-  envelope.set(new Uint8Array(encrypted), 4 + iv.length);
+  envelope[1] = iv.length; // iv length
+  envelope.set(iv, 2);
+  envelope.set(new Uint8Array(encrypted), 2 + iv.length);
 
   return new Blob([envelope], { type: "application/octet-stream" });
 }
@@ -97,10 +112,9 @@ export async function importEncryptedBackup(data: Uint8Array, passphrase: string
   const version = data[0];
   if (version !== 1) throw new Error(`Unsupported backup version: ${version}`);
 
-  const aadLen = data[1]; // AAD length (currently unused but reserved)
-  const ivLen = data[2];
-  const iv = data.slice(3 + aadLen, 3 + aadLen + ivLen);
-  const ciphertext = data.slice(3 + aadLen + ivLen);
+  const ivLen = data[1];
+  const iv = data.slice(2, 2 + ivLen);
+  const ciphertext = data.slice(2 + ivLen);
 
   const aad = createAad(farmId);
   const cryptoKey = await importAesKey(entropy);
@@ -121,26 +135,24 @@ export async function importEncryptedBackup(data: Uint8Array, passphrase: string
   );
 
   const db = await getDb();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawDb = db as any;
-  for (const [table, rows] of Object.entries(snapshot)) {
-    if (!Array.isArray(rows) || rows.length === 0) continue;
-    try {
-      await rawDb.run(`DELETE FROM "${table}"`);
-      for (const row of rows) {
-        const rowObj = row as Record<string, unknown>;
-        const cols = Object.keys(rowObj);
-        const placeholders = cols.map(() => "?").join(", ");
-        const values = cols.map((c) => rowObj[c]);
-        await rawDb.run(
-          `INSERT INTO "${table}" (${cols.map((c) => `"${c}"`).join(", ")}) VALUES (${placeholders})`,
-          values,
-        );
+  await db.transaction(async (tx) => {
+    for (const [table, rows] of Object.entries(snapshot)) {
+      if (!Array.isArray(rows)) continue;
+      try {
+        await tx.run(sql`DELETE FROM ${sql.identifier(table)}`);
+        for (const row of rows) {
+          const rowObj = row as Record<string, unknown>;
+          const cols = Object.keys(rowObj);
+          if (cols.length === 0) continue;
+          const columnsSql = sql.join(cols.map((c) => sql.identifier(c)), sql.raw(", "));
+          const valuesSql = sql.join(cols.map((c) => sql`${rowObj[c]}`), sql.raw(", "));
+          await tx.run(sql`INSERT INTO ${sql.identifier(table)} (${columnsSql}) VALUES (${valuesSql})`);
+        }
+      } catch {
+        // table may not exist in this schema version
       }
-    } catch {
-      // table may not exist or may be empty
     }
-  }
+  });
 }
 
 // ─── Upload to backup server ─────────────────────────────────────────────────

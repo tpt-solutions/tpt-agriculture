@@ -20,12 +20,13 @@ const callback: RemoteCallback = async (sql, params, method) => {
 
   if (method === "all") {
     const rows = await db.select(sql, params);
-    return { rows: rows as any[] };
+    return { rows: (rows as any[]).map((r) => Object.values(r)) };
   }
 
   if (method === "get") {
     const rows = await db.select(sql, params);
-    return { rows: (rows as any[])[0] ?? null };
+    const row = (rows as any[])[0];
+    return { rows: row ? Object.values(row) : (null as any) };
   }
 
   if (method === "values") {

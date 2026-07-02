@@ -134,6 +134,18 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     description: "Income and expense ledger, ROI per enterprise, GST summary",
     billingUnit: "included",
   },
+  "input-prices": {
+    name: "Input Prices",
+    category: "platform",
+    description: "Feed, chemical and seed cost per unit — feeds ROI calculations in Financials",
+    billingUnit: "included",
+  },
+  "output-prices": {
+    name: "Output Prices",
+    category: "platform",
+    description: "Wool, milk and produce price per unit — feeds ROI calculations in Financials",
+    billingUnit: "included",
+  },
   inventory: {
     name: "Inventory",
     category: "platform",
@@ -168,6 +180,12 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     name: "Soil & Water",
     category: "platform",
     description: "Soil test records, nutrient budget, irrigation log",
+    billingUnit: "included",
+  },
+  "decision-support": {
+    name: "Decision Support",
+    category: "platform",
+    description: "Rules-based advisory combining soil, weather, and financial data",
     billingUnit: "included",
   },
 };

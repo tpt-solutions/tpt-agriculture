@@ -13,6 +13,15 @@ export interface FormFieldDef {
   type: "text" | "number" | "date" | "select" | "textarea";
   required?: boolean;
   options?: { value: string; label: string }[];
+  /** Reference-data list key (see `DEFAULT_OPTIONS` in `@tpt/core`) — renders as a
+   * dropdown of default + farm-added values with a "+ Add new…" option. */
+  optionsKey?: string;
+  /** Renders a dropdown of live records from another module (e.g. picking which
+   * Flock a lambing record belongs to) instead of a static/reference list. */
+  foreignKey?: { moduleId: string; labelField: string };
+  /** Marks a `type: "select"` Yes/No field as backing a real boolean column, so
+   * form submission converts the "true"/"false" string to an actual boolean. */
+  boolean?: true;
   placeholder?: string;
 }
 

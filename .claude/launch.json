@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "desktop-pwa",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@tpt/desktop", "dev"],
+      "port": 1420
+    }
+  ]
+}

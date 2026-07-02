@@ -54,6 +54,9 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
+  optimizeDeps: {
+    exclude: ["wa-sqlite"],
+  },
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
     target:

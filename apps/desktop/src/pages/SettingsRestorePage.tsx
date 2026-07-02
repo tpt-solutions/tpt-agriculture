@@ -6,11 +6,11 @@ import { DashboardShell } from "@tpt/ui";
 import { Button } from "@tpt/ui";
 import { FormField } from "@tpt/ui";
 import { toast } from "sonner";
-import { useAuth } from "../auth/AuthContext.js";
+import { useFarm } from "../farm/FarmContext.js";
 import { importEncryptedBackup, listBackups, downloadBackup } from "../backup/backup-service.js";
 
 export function SettingsRestorePage() {
-  const { user } = useAuth();
+  const { farmId } = useFarm();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [passphrase, setPassphrase] = useState("");
@@ -18,9 +18,9 @@ export function SettingsRestorePage() {
   const [loading, setLoading] = useState(false);
 
   const { data: backups = [] } = useQuery({
-    queryKey: ["backups", user?.farmId],
-    queryFn: () => listBackups(user!.farmId),
-    enabled: !!user,
+    queryKey: ["backups", farmId],
+    queryFn: () => listBackups(farmId!),
+    enabled: !!farmId,
   });
 
   // Validate BIP39 phrase format before attempting restore
@@ -55,7 +55,7 @@ export function SettingsRestorePage() {
       }
 
       // Import backup with farmId as AAD for security
-      await importEncryptedBackup(data, passphrase, user!.farmId);
+      await importEncryptedBackup(data, passphrase, farmId!);
       toast.success("Backup restored successfully");
       navigate("/", { replace: true });
     } catch (err: unknown) {
@@ -70,16 +70,6 @@ export function SettingsRestorePage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleRestore(file);
-  }
-
-  if (user?.role !== "OWNER") {
-    return (
-      <DashboardShell title="Restore">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-500">Only the farm owner can restore backups.</p>
-        </div>
-      </DashboardShell>
-    );
   }
 
   return (

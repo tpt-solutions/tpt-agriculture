@@ -1,5 +1,4 @@
-import { integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
-import { users } from "./identity.js";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const farms = sqliteTable("farms", {
   id: text("id")
@@ -17,22 +16,3 @@ export const farms = sqliteTable("farms", {
     .notNull()
     .$defaultFn(() => new Date()),
 });
-
-export type FarmRole = "OWNER" | "ADMIN" | "MEMBER" | "READONLY";
-
-export const farmUsers = sqliteTable(
-  "farm_users",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    farmId: text("farm_id")
-      .notNull()
-      .references(() => farms.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    role: text("role").$type<FarmRole>().notNull().default("MEMBER"),
-  },
-  (t) => [unique().on(t.farmId, t.userId)]
-);

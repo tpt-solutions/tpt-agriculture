@@ -15,6 +15,41 @@
       "when": 1782881586491,
       "tag": "0001_cloudy_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782906961376,
+      "tag": "0002_gigantic_masque",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782933843351,
+      "tag": "0003_groovy_robbie_robertson",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782974769228,
+      "tag": "0004_groovy_human_cannonball",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782980341401,
+      "tag": "0005_cynical_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782993172280,
+      "tag": "0006_sad_selene",
+      "breakpoints": true
     }
   ]
 }

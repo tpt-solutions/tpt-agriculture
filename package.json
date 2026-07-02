@@ -13,13 +13,13 @@
     "desktop:build": "pnpm --filter @tpt/desktop tauri build"
   },
   "devDependencies": {
+    "prettier": "^3.4.2",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.3",
-    "prettier": "^3.4.2"
+    "typescript": "^5.7.3"
   },
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@11.9.0"
 }

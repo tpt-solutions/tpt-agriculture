@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { getDb } from "@tpt/core";
 import { farms } from "@tpt/core/schema";
 import { eq } from "drizzle-orm";
-import { useAuth } from "../auth/AuthContext.js";
+import { useFarm } from "../farm/FarmContext.js";
 import { fetchWeather } from "../weather/weather-service.js";
 
 const COUNTRY_PROFILES = [
@@ -34,9 +34,8 @@ const WEATHER_PROVIDERS = [
 ];
 
 export function SettingsFarmPage() {
-  const { user } = useAuth();
+  const { farmId } = useFarm();
   const queryClient = useQueryClient();
-  const isOwner = user?.role === "OWNER";
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -49,18 +48,18 @@ export function SettingsFarmPage() {
   const [testConnectionStatus, setTestConnectionStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
 
   const { data: farm } = useQuery({
-    queryKey: ["farm", user?.farmId],
+    queryKey: ["farm", farmId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!farmId) return null;
       const db = await getDb();
       const [row] = await db
         .select()
         .from(farms)
-        .where(eq(farms.id, user.farmId))
+        .where(eq(farms.id, farmId))
         .limit(1);
       return row;
     },
-    enabled: !!user,
+    enabled: !!farmId,
   });
 
   useEffect(() => {
@@ -78,7 +77,7 @@ export function SettingsFarmPage() {
 
   const updateFarmMutation = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error("Not authenticated");
+      if (!farmId) throw new Error("No farm found");
       const db = await getDb();
       const settings = {
         ...(farm?.settingsJson ?? {}),
@@ -96,10 +95,10 @@ export function SettingsFarmPage() {
           settingsJson: settings,
           updatedAt: new Date(),
         })
-        .where(eq(farms.id, user.farmId));
+        .where(eq(farms.id, farmId));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["farm", user?.farmId] });
+      queryClient.invalidateQueries({ queryKey: ["farm", farmId] });
       setEditing(false);
       toast.success("Farm settings updated");
       setTestConnectionStatus("idle");
@@ -160,7 +159,7 @@ export function SettingsFarmPage() {
   return (
     <DashboardShell title="Farm Settings">
       <div className="max-w-lg rounded-lg border border-gray-200 bg-white p-6">
-        {editing && isOwner ? (
+        {editing ? (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -322,11 +321,9 @@ export function SettingsFarmPage() {
                 {farm?.createdAt ? new Date(farm.createdAt).toLocaleDateString() : "—"}
               </p>
             </div>
-            {isOwner && (
-              <div className="pt-2">
-                <Button onClick={() => setEditing(true)}>Edit Farm Settings</Button>
-              </div>
-            )}
+            <div className="pt-2">
+              <Button onClick={() => setEditing(true)}>Edit Farm Settings</Button>
+            </div>
           </div>
         )}
       </div>

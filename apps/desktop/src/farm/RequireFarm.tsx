@@ -1,10 +1,10 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import type { ReactNode } from "react";
 import { Navigate } from "react-router";
-import { useAuth } from "./AuthContext.js";
+import { useFarm } from "./FarmContext.js";
 
-export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+export function RequireFarm({ children }: { children: ReactNode }) {
+  const { farmId, loading } = useFarm();
 
   if (loading) {
     return (
@@ -14,10 +14,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!farmId) {
+    return <Navigate to="/setup" replace />;
   }
 
   return <>{children}</>;
 }
-

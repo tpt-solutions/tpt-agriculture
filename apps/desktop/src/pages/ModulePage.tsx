@@ -1,5 +1,5 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
@@ -7,29 +7,38 @@ import { Button } from "@tpt/ui";
 import { Input } from "@tpt/ui";
 import { Select } from "@tpt/ui";
 import { toast } from "sonner";
-import { useAuth } from "../auth/AuthContext.js";
+import { useFarm } from "../farm/FarmContext.js";
 import { useCountryProfile } from "../context/FarmSettingsContext.js";
 import { MODULE_REGISTRY, getDb } from "@tpt/core";
 import { farms, sprayEvents, chemicals } from "@tpt/core/schema";
 import { eq, and, gt, asc } from "drizzle-orm";
 import { useModuleList, useModuleCreate, useModuleUpdate, useModuleDelete, getModuleAdapter } from "../modules/use-module-query.js";
+import { MODULE_TAB_GROUPS } from "../modules/registry.js";
 import { generateChemicalRegisterPdf, downloadPdf } from "../utils/pdf-export.js";
 import { PlantingCalendar } from "../components/PlantingCalendar.js";
+import { SelectWithCustom } from "../components/SelectWithCustom.js";
+import { ForeignKeySelect } from "../components/ForeignKeySelect.js";
 
 type SortDir = "asc" | "desc";
 
 export function ModulePage() {
   const { moduleId } = useParams<{ moduleId: string }>();
-  const { user } = useAuth();
+  const { farmId } = useFarm();
   const meta = moduleId ? MODULE_REGISTRY[moduleId] : undefined;
   
   // Get locale and chemical reg label from country profile
   const countryProfile = useCountryProfile();
   const locale = countryProfile?.locale;
   const chemicalRegLabel = countryProfile?.regulatory?.chemicalRegNumber;
-  
+
+  // Modules with sub-tables (e.g. Sheep → Flocks/Lambing/Drenching/Shearing) show a
+  // tab bar; the active tab picks which adapter/table is displayed on this page.
+  const tabs = (moduleId && MODULE_TAB_GROUPS[moduleId]) || (moduleId ? [{ id: moduleId, label: meta?.name ?? moduleId }] : []);
+  const [activeTabId, setActiveTabId] = useState<string>(moduleId ?? "");
+  const activeModuleId = tabs.some((t) => t.id === activeTabId) ? activeTabId : (moduleId ?? "");
+
   // Use locale-aware adapter
-  const adapter = moduleId ? getModuleAdapter(moduleId, locale, chemicalRegLabel) : undefined;
+  const adapter = activeModuleId ? getModuleAdapter(activeModuleId, locale, chemicalRegLabel) : undefined;
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -38,30 +47,37 @@ export function ModulePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+  const [viewMode, setViewMode] = useState<"table" | "calendar" | "roi">("table");
 
-  const { data: items = [], isLoading } = useModuleList(moduleId ?? "", user?.farmId);
-  const createMutation = useModuleCreate(moduleId ?? "", user?.farmId ?? "");
-  const updateMutation = useModuleUpdate(moduleId ?? "", user?.farmId ?? "");
-  const deleteMutation = useModuleDelete(moduleId ?? "", user?.farmId ?? "");
+  useEffect(() => {
+    setActiveTabId(moduleId ?? "");
+    setShowForm(false);
+    setEditingId(null);
+    setViewMode("table");
+  }, [moduleId]);
+
+  const { data: items = [], isLoading } = useModuleList(activeModuleId, farmId ?? undefined);
+  const createMutation = useModuleCreate(activeModuleId, farmId ?? "");
+  const updateMutation = useModuleUpdate(activeModuleId, farmId ?? "");
+  const deleteMutation = useModuleDelete(activeModuleId, farmId ?? "");
 
   // Fetch farm name for PDF export
   const { data: farmData } = useQuery({
-    queryKey: ["farm", user?.farmId],
+    queryKey: ["farm", farmId],
     queryFn: async () => {
-      if (!user) return null;
+      if (!farmId) return null;
       const db = await getDb();
-      const [row] = await db.select().from(farms).where(eq(farms.id, user.farmId)).limit(1);
+      const [row] = await db.select().from(farms).where(eq(farms.id, farmId)).limit(1);
       return row;
     },
-    enabled: !!user,
+    enabled: !!farmId,
   });
 
   // Active withholding period alerts (pest-spray-log only)
   const { data: withholdingAlerts = [] } = useQuery({
-    queryKey: ["withholding-alerts", user?.farmId],
+    queryKey: ["withholding-alerts", farmId],
     queryFn: async () => {
-      if (!user || moduleId !== "pest-spray-log") return [];
+      if (!farmId || moduleId !== "pest-spray-log") return [];
       const db = await getDb();
       const now = new Date();
       const active = await db
@@ -72,7 +88,7 @@ export function ModulePage() {
           chemicalId: sprayEvents.chemicalId,
         })
         .from(sprayEvents)
-        .where(and(eq(sprayEvents.farmId, user.farmId), gt(sprayEvents.withholdingEndDate, now)))
+        .where(and(eq(sprayEvents.farmId, farmId), gt(sprayEvents.withholdingEndDate, now)))
         .orderBy(asc(sprayEvents.withholdingEndDate));
 
       const alerts: { chemicalName: string; endDate: Date; daysRemaining: number }[] = [];
@@ -88,7 +104,7 @@ export function ModulePage() {
       }
       return alerts;
     },
-    enabled: !!user && moduleId === "pest-spray-log",
+    enabled: !!farmId && moduleId === "pest-spray-log",
   });
 
   // PDF export handler (pest-spray-log only)
@@ -118,7 +134,14 @@ export function ModulePage() {
 
   function openCreateForm() {
     setEditingId(null);
-    setFormValues({});
+    // Prefill date fields with today so quick-logging events (drenching, milking,
+    // spraying...) doesn't require re-picking the date every time.
+    const today = new Date().toISOString().slice(0, 10);
+    const defaults: Record<string, string> = {};
+    for (const field of mod.formFields) {
+      if (field.type === "date") defaults[field.key] = today;
+    }
+    setFormValues(defaults);
     setShowForm(true);
   }
 
@@ -153,6 +176,8 @@ export function ModulePage() {
         data[field.key] = Number(raw);
       } else if (field.type === "date") {
         data[field.key] = new Date(raw);
+      } else if (field.type === "select" && field.boolean) {
+        data[field.key] = raw === "true";
       } else {
         data[field.key] = raw;
       }
@@ -217,6 +242,27 @@ export function ModulePage() {
     }
   }
 
+  const roiRows = useMemo(() => {
+    if (moduleId !== "financials") return [];
+    const totals: Record<string, { income: number; expense: number }> = {};
+    for (const item of items) {
+      const key = item.moduleId ? String(item.moduleId) : "unassigned";
+      const bucket = (totals[key] ??= { income: 0, expense: 0 });
+      const amount = Number(item.amount) || 0;
+      if (item.type === "INCOME") bucket.income += amount;
+      else if (item.type === "EXPENSE") bucket.expense += amount;
+    }
+    return Object.entries(totals)
+      .map(([key, { income, expense }]) => ({
+        key,
+        label: key === "unassigned" ? "Unassigned" : (MODULE_REGISTRY[key]?.name ?? key),
+        income,
+        expense,
+        profit: income - expense,
+      }))
+      .sort((a, b) => b.profit - a.profit);
+  }, [items, moduleId]);
+
   const filteredItems = useMemo(() => {
     let result = items;
 
@@ -266,17 +312,25 @@ export function ModulePage() {
       title={meta.name}
       actions={
         <div className="flex items-center gap-2">
-          {moduleId === "pest-spray-log" && items.length > 0 && (
+          {moduleId === "pest-spray-log" && activeModuleId === moduleId && items.length > 0 && (
             <Button variant="secondary" onClick={handleExportPdf}>
               Export PDF
             </Button>
           )}
-          {moduleId === "crop-planning" && items.length > 0 && (
+          {moduleId === "crop-planning" && activeModuleId === moduleId && items.length > 0 && (
             <Button
               variant="secondary"
               onClick={() => setViewMode((v) => v === "table" ? "calendar" : "table")}
             >
               {viewMode === "table" ? "Calendar View" : "Table View"}
+            </Button>
+          )}
+          {moduleId === "financials" && activeModuleId === moduleId && items.length > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setViewMode((v) => v === "table" ? "roi" : "table")}
+            >
+              {viewMode === "table" ? "ROI View" : "Table View"}
             </Button>
           )}
           {mod.create && (
@@ -285,6 +339,26 @@ export function ModulePage() {
         </div>
       }
     >
+      {tabs.length > 1 && (
+        <div className="mb-4 flex gap-1 border-b border-gray-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => { setActiveTabId(tab.id); setShowForm(false); setEditingId(null); setViewMode("table"); }}
+              className={[
+                "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                activeModuleId === tab.id
+                  ? "border-green-600 text-green-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {showForm && (
         <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-700">
@@ -296,7 +370,26 @@ export function ModulePage() {
                 <label className="mb-1 block text-xs font-medium text-gray-600">
                   {field.label}
                 </label>
-                {field.type === "select" ? (
+                {field.type === "select" && field.foreignKey ? (
+                  <ForeignKeySelect
+                    farmId={farmId}
+                    moduleId={field.foreignKey.moduleId}
+                    labelField={field.foreignKey.labelField}
+                    value={formValues[field.key] ?? ""}
+                    onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
+                    placeholder={`Select ${field.label}`}
+                    required={field.required}
+                  />
+                ) : field.type === "select" && field.optionsKey ? (
+                  <SelectWithCustom
+                    farmId={farmId}
+                    listKey={field.optionsKey}
+                    value={formValues[field.key] ?? ""}
+                    onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
+                    placeholder={`Select ${field.label}`}
+                    required={field.required}
+                  />
+                ) : field.type === "select" ? (
                   <Select
                     value={formValues[field.key] ?? ""}
                     onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
@@ -359,6 +452,36 @@ export function ModulePage() {
               + Add first {mod.label.replace(/s$/, "").toLowerCase()}
             </Button>
           )}
+        </div>
+      ) : moduleId === "financials" && viewMode === "roi" ? (
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th className="px-4 py-2.5 font-medium text-gray-600">Enterprise</th>
+                <th className="px-4 py-2.5 font-medium text-gray-600">Income</th>
+                <th className="px-4 py-2.5 font-medium text-gray-600">Expense</th>
+                <th className="px-4 py-2.5 font-medium text-gray-600">Profit</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {roiRows.map((row) => (
+                <tr key={row.key} className="hover:bg-gray-50">
+                  <td className="px-4 py-2.5 text-gray-700">{row.label}</td>
+                  <td className="px-4 py-2.5 text-gray-700">{row.income.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-2.5 text-gray-700">{row.expense.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className={`px-4 py-2.5 font-medium ${row.profit >= 0 ? "text-green-700" : "text-red-700"}`}>
+                    {row.profit.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+              {roiRows.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-4 text-center text-gray-500">No ledger entries yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       ) : moduleId === "crop-planning" && viewMode === "calendar" ? (
         <div>

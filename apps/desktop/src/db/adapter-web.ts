@@ -1,79 +1,46 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
-import SQLiteESMFactory from "wa-sqlite/dist/wa-sqlite-async.mjs";
-// @ts-ignore - JS module without types
-import { OriginPrivateFileSystemVFS } from "wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { RemoteCallback } from "drizzle-orm/sqlite-proxy";
 import * as schema from "@tpt/core/schema";
+import type { SqliteRequest, SqliteResponse } from "./sqlite.worker.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SQLiteAPI = any;
+// wa-sqlite's OPFS VFS must run inside a dedicated Worker — OPFS's synchronous
+// file access API is only available off the main thread per spec.
+const worker = new Worker(new URL("./sqlite.worker.js", import.meta.url), { type: "module" });
 
-let sqlite3Instance: SQLiteAPI | null = null;
-let dbHandle: number | null = null;
+let nextId = 0;
+const pending = new Map<number, { resolve: (rows: unknown) => void; reject: (err: Error) => void }>();
 
-async function getDb() {
-  if (dbHandle !== null) return { sqlite3: sqlite3Instance!, db: dbHandle };
+worker.onmessage = (event: MessageEvent<SqliteResponse>) => {
+  const { id, rows, error } = event.data;
+  const entry = pending.get(id);
+  if (!entry) return;
+  pending.delete(id);
+  if (error) entry.reject(new Error(error));
+  else entry.resolve(rows);
+};
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const module = await SQLiteESMFactory();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  sqlite3Instance = (await import("wa-sqlite")).Factory(module);
+worker.onerror = (event: ErrorEvent) => {
+  for (const [, entry] of pending) entry.reject(new Error(event.message));
+  pending.clear();
+};
 
-  const vfs = new OriginPrivateFileSystemVFS();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  sqlite3Instance.vfs_register(vfs, true);
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-  dbHandle = await sqlite3Instance.open_v2("tpt-agriculture.db");
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  await sqlite3Instance.exec(dbHandle, "PRAGMA journal_mode = WAL");
-
-  return { sqlite3: sqlite3Instance, db: dbHandle };
-}
-
-function rowsToObjects(rows: any[][], columns: string[]): any[] {
-  return rows.map((row) => {
-    const obj: Record<string, any> = {};
-    columns.forEach((col, i) => {
-      obj[col] = row[i];
-    });
-    return obj;
+function call(sql: string, params: unknown[], method: SqliteRequest["method"]): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const id = nextId++;
+    pending.set(id, { resolve, reject });
+    worker.postMessage({ id, sql, params, method } satisfies SqliteRequest);
   });
 }
 
 const callback: RemoteCallback = async (sql, params, method) => {
-  const { sqlite3, db } = await getDb();
+  const rows = await call(sql, params, method);
 
-  if (method === "run") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    await sqlite3.run(db, sql, params as any[]);
-    return { rows: [] };
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  const result = await sqlite3.execWithParams(db, sql, params as any[]);
-
-  if (method === "all") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-destructuring, @typescript-eslint/no-unsafe-member-access
-    const { rows, columns } = result as { rows: any[][]; columns: string[] };
-    return { rows: rowsToObjects(rows, columns) };
-  }
-
-  if (method === "get") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-destructuring, @typescript-eslint/no-unsafe-member-access
-    const { rows, columns } = result as { rows: any[][]; columns: string[] };
-    if (rows.length === 0) return { rows: [] };
-    return { rows: rowsToObjects(rows.slice(0, 1), columns) };
-  }
-
-  if (method === "values") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return { rows: (result as { rows: any[][] }).rows };
-  }
-
-  return { rows: [] };
+  if (method === "run") return { rows: [] };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (method === "get") return { rows: rows as any };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { rows: (rows ?? []) as any };
 };
 
 export const tptDb = drizzle(callback, { schema });
-

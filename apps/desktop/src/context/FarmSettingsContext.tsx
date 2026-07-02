@@ -1,57 +1,28 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getDb } from "@tpt/core";
+import { getDb, resolveCountryProfile } from "@tpt/core";
+import type { CountryProfile } from "@tpt/core";
 import { farms } from "@tpt/core/schema";
 import { eq } from "drizzle-orm";
-import { useAuth } from "../auth/AuthContext.js";
+import { useFarm } from "../farm/FarmContext.js";
+import { resolveNotificationSettings } from "../notifications/reminder-sources.js";
+import type { NotificationSettings } from "../notifications/reminder-sources.js";
 
 interface FarmSettings {
   farmId: string;
   farmName: string;
-  countryProfile: {
-    id: string;
-    label: string;
-    locale: string;
-    dateFormat: string;
-    units: {
-      area: "ha";
-      weight: "kg";
-      volume: "L";
-      temperature: "°C";
-      speed: "kph";
-    };
-    regulatory: {
-      chemicalRegNumber: string;
-    };
-    weatherProviders: readonly string[];
-  };
+  countryProfile: CountryProfile;
   settings: Record<string, unknown>;
+  notifications: NotificationSettings;
   lat: number | null;
   lon: number | null;
 }
 
 const FarmSettingsContext = createContext<FarmSettings | null>(null);
 
-// Simple country profile resolution inline (will be replaced with full implementation)
-const COUNTRY_PROFILES: Record<string, FarmSettings["countryProfile"]> = {
-  nz: {
-    id: "nz",
-    label: "New Zealand",
-    locale: "en-NZ",
-    dateFormat: "dd/MM/yyyy",
-    units: { area: "ha", weight: "kg", volume: "L", temperature: "°C", speed: "kph" },
-    regulatory: { chemicalRegNumber: "ACVM Number" },
-    weatherProviders: ["open-meteo", "custom"] as const,
-  },
-};
-
-const resolveCountryProfile = (id: string | null | undefined) =>
-  COUNTRY_PROFILES[id ?? "nz"] ?? COUNTRY_PROFILES.nz;
-
 export function FarmSettingsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const farmId = user?.farmId;
+  const { farmId } = useFarm();
 
   const { data: farmData } = useQuery({
     queryKey: ["farm-settings", farmId],
@@ -69,6 +40,7 @@ export function FarmSettingsProvider({ children }: { children: React.ReactNode }
         farmName: farm.name,
         countryProfile: profile,
         settings,
+        notifications: resolveNotificationSettings(settings.notifications),
         lat: farm.lat,
         lon: farm.lon,
       };

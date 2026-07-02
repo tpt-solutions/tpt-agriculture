@@ -3,11 +3,14 @@ import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
 import { getDb } from "@tpt/core";
-import { farms, sprayEvents, chemicals, cropPlans } from "@tpt/core/schema";
-import { eq, and, gt, asc } from "drizzle-orm";
-import { useAuth } from "../auth/AuthContext.js";
+import { farms } from "@tpt/core/schema";
+import { eq } from "drizzle-orm";
+import { useFarm } from "../farm/FarmContext.js";
+import { useSettings } from "../context/FarmSettingsContext.js";
 import { MODULE_ADAPTERS } from "../modules/registry.js";
 import { fetchWeather, getWeatherEmoji } from "../weather/weather-service.js";
+import { getReminders } from "../notifications/reminder-sources.js";
+import type { ReminderItem } from "../notifications/reminder-sources.js";
 
 interface ModuleCard {
   id: string;
@@ -39,27 +42,36 @@ const MODULE_CARDS: ModuleCard[] = [
   { id: "pasture", name: "Pasture", description: "Paddock rotation planner, pasture cover", category: "livestock", path: "/modules/pasture" },
 ];
 
+// Platform tools are always visible — not gated by the horticulture/livestock module picker.
+const PLATFORM_CARDS: ModuleCard[] = [
+  { id: "financials", name: "Financials", description: "Income/expense ledger tagged by enterprise", category: "platform", path: "/modules/financials" },
+  { id: "input-prices", name: "Input Prices", description: "Feed, chemical and seed cost per unit", category: "platform", path: "/modules/input-prices" },
+  { id: "output-prices", name: "Output Prices", description: "Wool, milk and produce price per unit", category: "platform", path: "/modules/output-prices" },
+  { id: "soil-water", name: "Soil & Water", description: "Soil test records, pH, nutrient levels", category: "platform", path: "/modules/soil-water" },
+  { id: "inventory", name: "Inventory", description: "Chemical, seed, feed and fertiliser stock levels", category: "platform", path: "/modules/inventory" },
+  { id: "equipment", name: "Equipment", description: "Asset register, maintenance log, WoF/CoF reminders", category: "platform", path: "/modules/equipment" },
+  { id: "compliance", name: "Compliance", description: "Regulatory checklist per country profile", category: "platform", path: "/modules/compliance" },
+  { id: "staff", name: "Staff", description: "Staff roster, timesheets, contractor records", category: "platform", path: "/modules/staff" },
+  { id: "weather", name: "Weather & Spray Windows", description: "5-day hourly spray-window calculator", category: "platform", path: "/modules/weather" },
+  { id: "decision-support", name: "Decision Support", description: "Rules-based farm advisory from your data", category: "platform", path: "/modules/decision-support" },
+];
+
 const CATEGORY_LABELS: Record<string, string> = {
   horticulture: "Horticulture",
   livestock: "Livestock",
+  platform: "Financials & Pricing",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   horticulture: "bg-green-50 border-green-200 hover:bg-green-100",
   livestock: "bg-amber-50 border-amber-200 hover:bg-amber-100",
+  platform: "bg-blue-50 border-blue-200 hover:bg-blue-100",
 };
 
-interface UpcomingEvent {
-  type: "withholding" | "harvest" | "planting";
-  label: string;
-  date: Date;
-  detail: string;
-  path: string;
-}
 
 export function DashboardPage() {
-  const { user } = useAuth();
-  const farmId = user?.farmId;
+  const { farmId, farmName } = useFarm();
+  const settings = useSettings();
 
   const { data: farmData } = useQuery({
     queryKey: ["farm", farmId],
@@ -113,131 +125,26 @@ export function DashboardPage() {
     staleTime: 30_000,
   });
 
-  // Fetch upcoming events
+  // Fetch upcoming events from the shared reminders registry (excludes overdue items —
+  // those surface via the notification bell instead of the dashboard strip)
   const { data: upcomingEvents = [] } = useQuery({
-    queryKey: ["upcoming-events", farmId],
+    queryKey: ["upcoming-events", farmId, settings?.notifications],
     queryFn: async () => {
-      if (!farmId) return [];
-      const db = await getDb();
-      const now = new Date();
-      const events: UpcomingEvent[] = [];
-
-      // Active withholding periods from spray events
-      try {
-        const activeWithholding = await db
-          .select({
-            id: sprayEvents.id,
-            withholdingEndDate: sprayEvents.withholdingEndDate,
-            chemicalId: sprayEvents.chemicalId,
-          })
-          .from(sprayEvents)
-          .where(
-            and(
-              eq(sprayEvents.farmId, farmId),
-              gt(sprayEvents.withholdingEndDate, now)
-            )
-          )
-          .orderBy(asc(sprayEvents.withholdingEndDate))
-          .limit(5);
-
-        for (const sw of activeWithholding) {
-          if (!sw.withholdingEndDate) continue;
-          let chemicalName = "Unknown chemical";
-          if (sw.chemicalId) {
-            const [chem] = await db
-              .select({ name: chemicals.name })
-              .from(chemicals)
-              .where(eq(chemicals.id, sw.chemicalId))
-              .limit(1);
-            if (chem) chemicalName = chem.name;
-          }
-          events.push({
-            type: "withholding",
-            label: "Withholding Period",
-            date: sw.withholdingEndDate,
-            detail: chemicalName,
-            path: "/modules/pest-spray-log",
-          });
-        }
-      } catch {
-        // Table may not have data yet
-      }
-
-      // Upcoming planned harvests
-      try {
-        const upcomingHarvests = await db
-          .select({
-            id: cropPlans.id,
-            cropVariety: cropPlans.cropVariety,
-            plannedHarvestDate: cropPlans.plannedHarvestDate,
-          })
-          .from(cropPlans)
-          .where(
-            and(
-              eq(cropPlans.farmId, farmId),
-              gt(cropPlans.plannedHarvestDate, now),
-              eq(cropPlans.status, "IN_PROGRESS")
-            )
-          )
-          .orderBy(asc(cropPlans.plannedHarvestDate))
-          .limit(5);
-
-        for (const h of upcomingHarvests) {
-          if (!h.plannedHarvestDate) continue;
-          events.push({
-            type: "harvest",
-            label: "Planned Harvest",
-            date: h.plannedHarvestDate,
-            detail: h.cropVariety,
-            path: "/modules/crop-planning",
-          });
-        }
-      } catch {
-        // Table may not have data yet
-      }
-
-      // Upcoming planned plantings
-      try {
-        const upcomingPlantings = await db
-          .select({
-            id: cropPlans.id,
-            cropVariety: cropPlans.cropVariety,
-            plannedPlantDate: cropPlans.plannedPlantDate,
-          })
-          .from(cropPlans)
-          .where(
-            and(
-              eq(cropPlans.farmId, farmId),
-              gt(cropPlans.plannedPlantDate, now),
-              eq(cropPlans.status, "PLANNED")
-            )
-          )
-          .orderBy(asc(cropPlans.plannedPlantDate))
-          .limit(5);
-
-        for (const p of upcomingPlantings) {
-          if (!p.plannedPlantDate) continue;
-          events.push({
-            type: "planting",
-            label: "Planned Planting",
-            date: p.plannedPlantDate,
-            detail: p.cropVariety,
-            path: "/modules/crop-planning",
-          });
-        }
-      } catch {
-        // Table may not have data yet
-      }
-
-      // Sort all events by date and take the first 8
-      events.sort((a, b) => a.date.getTime() - b.date.getTime());
-      return events.slice(0, 8);
+      if (!farmId || !settings) return [];
+      const reminders = await getReminders(farmId, settings.notifications);
+      return reminders.filter((r) => r.severity !== "overdue").slice(0, 8);
     },
-    enabled: !!farmId,
+    enabled: !!farmId && !!settings,
     staleTime: 60_000,
   });
 
-  const grouped = MODULE_CARDS.reduce<Record<string, ModuleCard[]>>(
+  const enabledModuleIds = settings?.settings.enabledModuleIds as string[] | undefined;
+  const visibleCards = [
+    ...(enabledModuleIds ? MODULE_CARDS.filter((card) => enabledModuleIds.includes(card.id)) : MODULE_CARDS),
+    ...PLATFORM_CARDS,
+  ];
+
+  const grouped = visibleCards.reduce<Record<string, ModuleCard[]>>(
     (acc, card) => {
       (acc[card.category] ??= []).push(card);
       return acc;
@@ -250,14 +157,22 @@ export function DashboardPage() {
     return `${count} ${label}`;
   }
 
-  const EVENT_STYLES: Record<string, { bg: string; text: string; icon: string }> = {
-    withholding: { bg: "bg-red-50 border-red-200", text: "text-red-700", icon: "\u26A0" },
-    harvest: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", icon: "\uD83C\uDF3E" },
-    planting: { bg: "bg-green-50 border-green-200", text: "text-green-700", icon: "\uD83C\uDF31" },
+  const EVENT_ICONS: Record<string, string> = {
+    "pest-spray-log.withholding": "\u26A0",
+    "sheep.drenching-withholding": "\u26A0",
+    "crop-planning.harvest": "\uD83C\uDF3E",
+    "crop-planning.planting": "\uD83C\uDF31",
+    "pigs.weaning": "\uD83D\uDC37",
+    "bees.inspection": "\uD83D\uDC1D",
+  };
+
+  const EVENT_SEVERITY_STYLES: Record<string, { bg: string; text: string }> = {
+    "due-soon": { bg: "bg-red-50 border-red-200", text: "text-red-700" },
+    upcoming: { bg: "bg-green-50 border-green-200", text: "text-green-700" },
   };
 
   return (
-    <DashboardShell title={`Welcome to ${farmData?.name ?? user?.farmName ?? "your farm"}`}>
+    <DashboardShell title={`Welcome to ${farmData?.name ?? farmName ?? "your farm"}`}>
       {/* Weather Widget */}
       {weatherData && (
         <div className="mb-6">
@@ -285,16 +200,17 @@ export function DashboardPage() {
             Upcoming Events
           </h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {upcomingEvents.map((event, i) => {
-              const style = EVENT_STYLES[event.type] ?? EVENT_STYLES.planting;
+            {upcomingEvents.map((event: ReminderItem) => {
+              const style = EVENT_SEVERITY_STYLES[event.severity] ?? EVENT_SEVERITY_STYLES.upcoming;
+              const icon = EVENT_ICONS[event.sourceId] ?? "📌";
               return (
                 <Link
-                  key={i}
+                  key={event.id}
                   to={event.path}
                   className={`rounded-lg border p-3 transition-colors hover:opacity-80 ${style.bg}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-base">{style.icon}</span>
+                    <span className="text-base">{icon}</span>
                     <span className={`text-xs font-semibold ${style.text}`}>{event.label}</span>
                   </div>
                   <div className="mt-1 text-sm font-medium text-gray-800">{event.detail}</div>

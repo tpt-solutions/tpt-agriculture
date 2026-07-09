@@ -58,3 +58,36 @@ export function useModuleDelete(moduleId: string, farmId: string) {
     },
   });
 }
+
+/**
+ * Bulk-create hook: creates N records (one per parent ID) with the same event data.
+ * Skips the `parentIdField` in `data` and uses `parentIds` instead.
+ */
+export function useModuleBulkCreate(moduleId: string, farmId: string) {
+  const queryClient = useQueryClient();
+  const adapter = MODULE_ADAPTERS[moduleId];
+  return useMutation({
+    mutationFn: async ({
+      parentIds,
+      parentIdField,
+      data,
+    }: {
+      parentIds: string[];
+      parentIdField?: string;
+      data: Record<string, unknown>;
+    }) => {
+      if (!adapter?.create) throw new Error("Adapter does not support create");
+      await Promise.all(
+        parentIds.map(async (parentId) => {
+          const record = { ...data };
+          if (parentIdField) record[parentIdField] = parentId;
+          return adapter.create!(farmId, record);
+        })
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["module", moduleId, "list", farmId] });
+      queryClient.invalidateQueries({ queryKey: ["module-counts", farmId] });
+    },
+  });
+}

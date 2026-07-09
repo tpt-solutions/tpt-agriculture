@@ -9,6 +9,7 @@ import { useFarm } from "../farm/FarmContext.js";
 import { useSettings } from "../context/FarmSettingsContext.js";
 import { MODULE_ADAPTERS } from "../modules/registry.js";
 import { fetchWeather, getWeatherEmoji } from "../weather/weather-service.js";
+import { IncomeExpenseChart } from "../components/IncomeExpenseChart.js";
 import { getReminders } from "../notifications/reminder-sources.js";
 import type { ReminderItem } from "../notifications/reminder-sources.js";
 
@@ -62,10 +63,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   platform: "Financials & Pricing",
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
+  const CATEGORY_COLORS: Record<string, string> = {
   horticulture: "bg-green-50 border-green-200 hover:bg-green-100",
   livestock: "bg-amber-50 border-amber-200 hover:bg-amber-100",
   platform: "bg-blue-50 border-blue-200 hover:bg-blue-100",
+};
+
+const SETUP_NUDGES: Record<string, { label: string; path: string; description: string }> = {
+  "pest-spray-log": { label: "Chemicals", path: "/modules/pest-spray-log", description: "No chemicals registered yet" },
+  equipment: { label: "Equipment", path: "/modules/equipment", description: "No equipment assets registered yet" },
+  compliance: { label: "Compliance", path: "/modules/compliance", description: "No compliance checks set up yet" },
+  financials: { label: "Financials", path: "/modules/financials", description: "No financial records yet" },
+  inventory: { label: "Inventory", path: "/modules/inventory", description: "No inventory items yet" },
+  staff: { label: "Staff", path: "/modules/staff", description: "No staff members added yet" },
+  "soil-water": { label: "Soil & Water", path: "/modules/soil-water", description: "No soil tests recorded yet" },
 };
 
 
@@ -223,6 +234,43 @@ export function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Income vs Expense Chart */}
+      {farmId && <IncomeExpenseChart farmId={farmId} />}
+
+      {/* Setup Completeness Nudges */}
+      {(() => {
+        const emptyNudges = Object.entries(SETUP_NUDGES)
+          .filter(([id]) => !enabledModuleIds || enabledModuleIds.includes(id))
+          .filter(([id]) => {
+            const count = recordCounts[id];
+            return count === undefined || count === 0;
+          });
+        if (emptyNudges.length === 0) return null;
+        return (
+          <div className="mb-6">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              Setup Suggestions
+            </h2>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {emptyNudges.map(([id, nudge]) => (
+                <Link
+                  key={id}
+                  to={nudge.path}
+                  className="rounded-lg border border-amber-200 bg-amber-50 p-3 transition-colors hover:opacity-80"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⚙️</span>
+                    <span className="text-xs font-semibold text-amber-700">{nudge.label}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-800">{nudge.description}</p>
+                  <p className="mt-0.5 text-xs text-amber-600">Set up now →</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {Object.entries(grouped).map(([category, cards]) => (
         <div key={category} className="mb-6">

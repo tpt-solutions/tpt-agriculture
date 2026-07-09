@@ -14,6 +14,7 @@ interface SelectWithCustomProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  countryId?: string;
 }
 
 export function SelectWithCustom({
@@ -23,8 +24,9 @@ export function SelectWithCustom({
   onChange,
   placeholder,
   required,
+  countryId,
 }: SelectWithCustomProps) {
-  const { options, addCustom } = useOptionsWithCustom(farmId, listKey);
+  const { options, addCustom } = useOptionsWithCustom(farmId, listKey, countryId);
   const [adding, setAdding] = useState(false);
   const [newValue, setNewValue] = useState("");
 

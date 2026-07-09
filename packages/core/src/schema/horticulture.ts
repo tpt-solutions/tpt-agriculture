@@ -349,3 +349,97 @@ export const aquaPlantYields = sqliteTable("aqua_plant_yields", {
   bed: text("bed"),
   notes: text("notes"),
 });
+
+// ─── Forestry ────────────────────────────────────────────────────────────────
+
+export const forestBlocks = sqliteTable("forest_blocks", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  species: text("species").notNull(),
+  areaHa: real("area_ha").notNull(),
+  plantingDate: integer("planting_date", { mode: "timestamp" }),
+  expectedHarvestYear: integer("expected_harvest_year"),
+  stockingRate: integer("stocking_rate"),
+  status: text("status").notNull().default("ESTABLISHING"),
+  soilType: text("soil_type"),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const forestPlantings = sqliteTable("forest_plantings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  blockId: text("block_id").notNull().references(() => forestBlocks.id, { onDelete: "cascade" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  species: text("species").notNull(),
+  seedlingsPlanted: integer("seedlings_planted").notNull(),
+  areaHa: real("area_ha").notNull(),
+  spacing: text("spacing"),
+  supplier: text("supplier"),
+  notes: text("notes"),
+});
+
+export const forestThinnings = sqliteTable("forest_thinnings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  blockId: text("block_id").notNull().references(() => forestBlocks.id, { onDelete: "cascade" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  volumeM3: real("volume_m3").notNull(),
+  areaHa: real("area_ha"),
+  avgStemDiamCm: real("avg_stem_diam_cm"),
+  harvester: text("harvester"),
+  notes: text("notes"),
+});
+
+export const forestHarvests = sqliteTable("forest_harvests", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  blockId: text("block_id").notNull().references(() => forestBlocks.id, { onDelete: "cascade" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  volumeM3: real("volume_m3").notNull(),
+  areaHa: real("area_ha"),
+  avgStemDiamCm: real("avg_stem_diam_cm"),
+  buyer: text("buyer"),
+  pricePerM3: real("price_per_m3"),
+  notes: text("notes"),
+});
+
+// ─── Mushroom Production ──────────────────────────────────────────────────────
+
+export const mushroomRooms = sqliteTable("mushroom_rooms", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  roomType: text("room_type").notNull(),
+  shelfCount: integer("shelf_count"),
+  areaSqm: real("area_sqm"),
+  climateControl: integer("climate_control", { mode: "boolean" }).notNull().default(false),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const mushroomCrops = sqliteTable("mushroom_crops", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  roomId: text("room_id").notNull().references(() => mushroomRooms.id, { onDelete: "cascade" }),
+  species: text("species").notNull(),
+  substrateType: text("substrate_type"),
+  spawnDate: integer("spawn_date", { mode: "timestamp" }).notNull(),
+  spawnSource: text("spawn_source"),
+  casingDate: integer("casing_date", { mode: "timestamp" }),
+  firstHarvestDate: integer("first_harvest_date", { mode: "timestamp" }),
+  lastHarvestDate: integer("last_harvest_date", { mode: "timestamp" }),
+  totalYieldKg: real("total_yield_kg"),
+  status: text("status").notNull().default("IN_CROP"),
+  notes: text("notes"),
+});
+
+export const mushroomHarvests = sqliteTable("mushroom_harvests", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  cropId: text("crop_id").notNull().references(() => mushroomCrops.id, { onDelete: "cascade" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  kg: real("kg").notNull(),
+  grade: text("grade"),
+  buyer: text("buyer"),
+  pricePerKg: real("price_per_kg"),
+  notes: text("notes"),
+});

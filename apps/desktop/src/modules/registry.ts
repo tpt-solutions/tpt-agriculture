@@ -271,13 +271,13 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "yearPlanted", label: "Year Planted", type: "number" },
     ],
     formFields: [
-      { key: "name", label: "Block Name", type: "text", required: true },
-      { key: "variety", label: "Variety", type: "select", optionsKey: "grape-variety", required: true },
-      { key: "areaHa", label: "Area (ha)", type: "number", required: true },
-      { key: "rowCount", label: "Row Count", type: "number" },
-      { key: "rootstock", label: "Rootstock", type: "text" },
-      { key: "yearPlanted", label: "Year Planted", type: "number" },
-      { key: "trellisSystem", label: "Trellis System", type: "text" },
+      { key: "name", label: "Block Name", type: "text", required: true, section: "Block Details" },
+      { key: "variety", label: "Variety", type: "select", optionsKey: "grape-variety", required: true, section: "Block Details" },
+      { key: "areaHa", label: "Area (ha)", type: "number", required: true, section: "Block Details" },
+      { key: "rowCount", label: "Row Count", type: "number", section: "Vineyard Setup" },
+      { key: "rootstock", label: "Rootstock", type: "text", section: "Vineyard Setup" },
+      { key: "yearPlanted", label: "Year Planted", type: "number", section: "Vineyard Setup" },
+      { key: "trellisSystem", label: "Trellis System", type: "text", section: "Vineyard Setup" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.vitBlocks).where(eq(schema.vitBlocks.farmId, farmId)).orderBy(asc(schema.vitBlocks.name)) as unknown as Promise<Record<string, unknown>[]>,
@@ -303,12 +303,12 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "areaHa", label: "Area (ha)", type: "number" },
     ],
     formFields: [
-      { key: "name", label: "Block Name", type: "text", required: true },
-      { key: "species", label: "Species", type: "select", optionsKey: "orchard-species", required: true },
-      { key: "variety", label: "Variety", type: "select", optionsKey: "orchard-variety" },
-      { key: "areaHa", label: "Area (ha)", type: "number" },
-      { key: "yearPlanted", label: "Year Planted", type: "number" },
-      { key: "rootstock", label: "Rootstock", type: "text" },
+      { key: "name", label: "Block Name", type: "text", required: true, section: "Block Details" },
+      { key: "species", label: "Species", type: "select", optionsKey: "orchard-species", required: true, section: "Block Details" },
+      { key: "variety", label: "Variety", type: "select", optionsKey: "orchard-variety", section: "Block Details" },
+      { key: "areaHa", label: "Area (ha)", type: "number", section: "Planting Info" },
+      { key: "yearPlanted", label: "Year Planted", type: "number", section: "Planting Info" },
+      { key: "rootstock", label: "Rootstock", type: "text", section: "Planting Info" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.orchardBlocks).where(eq(schema.orchardBlocks.farmId, farmId)).orderBy(asc(schema.orchardBlocks.name)) as unknown as Promise<Record<string, unknown>[]>,
@@ -444,6 +444,101 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       return row as Record<string, unknown>;
     },
     delete: async (farmId, id) => { await getDb().delete(schema.aquaSystems).where(and(eq(schema.aquaSystems.id, id), eq(schema.aquaSystems.farmId, farmId))); },
+  },
+
+  // ─── New Phase 20 Modules ──────────────────────────────────────────────────
+
+  forestry: {
+    moduleId: "forestry",
+    label: "Forest Blocks",
+    primaryTable: "forest_blocks",
+    columns: [
+      { key: "name", label: "Block" },
+      { key: "species", label: "Species" },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+      { key: "status", label: "Status" },
+      { key: "expectedHarvestYear", label: "Harvest Year", type: "number" },
+    ],
+    formFields: [
+      { key: "name", label: "Block Name", type: "text", required: true },
+      { key: "species", label: "Species", type: "select", optionsKey: "forestry-species", required: true },
+      { key: "areaHa", label: "Area (ha)", type: "number", required: true },
+      { key: "plantingDate", label: "Planting Date", type: "date" },
+      { key: "expectedHarvestYear", label: "Expected Harvest Year", type: "number" },
+      { key: "stockingRate", label: "Stocking Rate (stems/ha)", type: "number" },
+      { key: "status", label: "Status", type: "select", optionsKey: "forestry-status" },
+      { key: "soilType", label: "Soil Type", type: "select", optionsKey: "soil-type" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    list: async (farmId) => (await getDb()).select().from(schema.forestBlocks).where(eq(schema.forestBlocks.farmId, farmId)).orderBy(asc(schema.forestBlocks.name)) as unknown as Promise<Record<string, unknown>[]>,
+    create: async (farmId, data) => {
+      const [row] = await getDb().insert(schema.forestBlocks).values({ ...data, farmId } as any).returning();
+      return row as Record<string, unknown>;
+    },
+    update: async (farmId, id, data) => {
+      const [row] = await getDb().update(schema.forestBlocks).set(data).where(and(eq(schema.forestBlocks.id, id), eq(schema.forestBlocks.farmId, farmId))).returning();
+      return row as Record<string, unknown>;
+    },
+    delete: async (farmId, id) => { await getDb().delete(schema.forestBlocks).where(and(eq(schema.forestBlocks.id, id), eq(schema.forestBlocks.farmId, farmId))); },
+  },
+
+  mushroom: {
+    moduleId: "mushroom",
+    label: "Mushroom Rooms",
+    primaryTable: "mushroom_rooms",
+    columns: [
+      { key: "name", label: "Room" },
+      { key: "roomType", label: "Type" },
+      { key: "shelfCount", label: "Shelves", type: "number" },
+      { key: "areaSqm", label: "Area (m²)", type: "number" },
+    ],
+    formFields: [
+      { key: "name", label: "Room Name", type: "text", required: true },
+      { key: "roomType", label: "Room Type", type: "text", required: true },
+      { key: "shelfCount", label: "Shelf Count", type: "number" },
+      { key: "areaSqm", label: "Area (m²)", type: "number" },
+      { key: "climateControl", label: "Climate Control", type: "select", boolean: true, options: [{ value: "true", label: "Yes" }, { value: "false", label: "No" }] },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    list: async (farmId) => (await getDb()).select().from(schema.mushroomRooms).where(eq(schema.mushroomRooms.farmId, farmId)).orderBy(asc(schema.mushroomRooms.name)) as unknown as Promise<Record<string, unknown>[]>,
+    create: async (farmId, data) => {
+      const [row] = await getDb().insert(schema.mushroomRooms).values({ ...data, farmId } as any).returning();
+      return row as Record<string, unknown>;
+    },
+    update: async (farmId, id, data) => {
+      const [row] = await getDb().update(schema.mushroomRooms).set(data).where(and(eq(schema.mushroomRooms.id, id), eq(schema.mushroomRooms.farmId, farmId))).returning();
+      return row as Record<string, unknown>;
+    },
+    delete: async (farmId, id) => { await getDb().delete(schema.mushroomRooms).where(and(eq(schema.mushroomRooms.id, id), eq(schema.mushroomRooms.farmId, farmId))); },
+  },
+
+  nursery: {
+    moduleId: "nursery",
+    label: "Nursery Beds",
+    primaryTable: "nursery_beds",
+    columns: [
+      { key: "name", label: "Bed" },
+      { key: "bedType", label: "Type" },
+      { key: "areaSqm", label: "Area (m²)", type: "number" },
+      { key: "capacity", label: "Capacity", type: "number" },
+    ],
+    formFields: [
+      { key: "name", label: "Bed Name", type: "text", required: true },
+      { key: "bedType", label: "Bed Type", type: "select", optionsKey: "nursery-bed-type", required: true },
+      { key: "areaSqm", label: "Area (m²)", type: "number" },
+      { key: "capacity", label: "Capacity (cells/plants)", type: "number" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    list: async (farmId) => (await getDb()).select().from(schema.nurseryBeds).where(eq(schema.nurseryBeds.farmId, farmId)).orderBy(asc(schema.nurseryBeds.name)) as unknown as Promise<Record<string, unknown>[]>,
+    create: async (farmId, data) => {
+      const [row] = await getDb().insert(schema.nurseryBeds).values({ ...data, farmId } as any).returning();
+      return row as Record<string, unknown>;
+    },
+    update: async (farmId, id, data) => {
+      const [row] = await getDb().update(schema.nurseryBeds).set(data).where(and(eq(schema.nurseryBeds.id, id), eq(schema.nurseryBeds.farmId, farmId))).returning();
+      return row as Record<string, unknown>;
+    },
+    delete: async (farmId, id) => { await getDb().delete(schema.nurseryBeds).where(and(eq(schema.nurseryBeds.id, id), eq(schema.nurseryBeds.farmId, farmId))); },
   },
 
   "cattle-dairy": {
@@ -721,12 +816,12 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "description", label: "Description" },
     ],
     formFields: [
-      { key: "type", label: "Type", type: "select", required: true, options: [{ value: "INCOME", label: "Income" }, { value: "EXPENSE", label: "Expense" }] },
-      { key: "date", label: "Date", type: "date", required: true },
-      { key: "amount", label: "Amount", type: "number", required: true },
-      { key: "category", label: "Category", type: "select", optionsKey: "ledger-category" },
-      { key: "moduleId", label: "Enterprise", type: "select", options: ENTERPRISE_OPTIONS },
-      { key: "description", label: "Description", type: "text" },
+      { key: "type", label: "Type", type: "select", required: true, section: "Transaction", options: [{ value: "INCOME", label: "Income" }, { value: "EXPENSE", label: "Expense" }] },
+      { key: "date", label: "Date", type: "date", required: true, section: "Transaction" },
+      { key: "amount", label: "Amount", type: "number", required: true, section: "Transaction" },
+      { key: "category", label: "Category", type: "select", optionsKey: "ledger-category", section: "Classification" },
+      { key: "moduleId", label: "Enterprise", type: "select", options: ENTERPRISE_OPTIONS, section: "Classification" },
+      { key: "description", label: "Description", type: "text", section: "Classification" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.ledgerEntries).where(eq(schema.ledgerEntries.farmId, farmId)).orderBy(desc(schema.ledgerEntries.date)) as unknown as Promise<Record<string, unknown>[]>,
@@ -753,11 +848,11 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "effectiveDate", label: "Effective From", type: "date" },
     ],
     formFields: [
-      { key: "itemName", label: "Item", type: "text", required: true },
-      { key: "category", label: "Category", type: "select", optionsKey: "input-price-category" },
-      { key: "unit", label: "Unit", type: "select", optionsKey: "unit-of-measure" },
-      { key: "costPerUnit", label: "Cost per Unit", type: "number", required: true },
-      { key: "effectiveDate", label: "Effective From", type: "date", required: true },
+      { key: "itemName", label: "Item", type: "text", required: true, section: "Item Details" },
+      { key: "category", label: "Category", type: "select", optionsKey: "input-price-category", section: "Item Details" },
+      { key: "unit", label: "Unit", type: "select", optionsKey: "unit-of-measure", section: "Item Details" },
+      { key: "costPerUnit", label: "Cost per Unit", type: "number", required: true, section: "Pricing" },
+      { key: "effectiveDate", label: "Effective From", type: "date", required: true, section: "Pricing" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.inputPrices).where(eq(schema.inputPrices.farmId, farmId)).orderBy(asc(schema.inputPrices.itemName)) as unknown as Promise<Record<string, unknown>[]>,
@@ -819,16 +914,16 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "potassiumKgHa", label: "K (kg/ha)", type: "number" },
     ],
     formFields: [
-      { key: "testDate", label: "Test Date", type: "date", required: true },
-      { key: "fieldName", label: "Field / Paddock", type: "text" },
-      { key: "labReference", label: "Lab Reference", type: "text" },
-      { key: "pH", label: "pH", type: "number" },
-      { key: "organicMatterPct", label: "Organic Matter (%)", type: "number" },
-      { key: "nitrogenKgHa", label: "Nitrogen (kg/ha)", type: "number" },
-      { key: "phosphorusKgHa", label: "Phosphorus (kg/ha)", type: "number" },
-      { key: "potassiumKgHa", label: "Potassium (kg/ha)", type: "number" },
-      { key: "calciumKgHa", label: "Calcium (kg/ha)", type: "number" },
-      { key: "sulphurKgHa", label: "Sulphur (kg/ha)", type: "number" },
+      { key: "testDate", label: "Test Date", type: "date", required: true, section: "Test Details" },
+      { key: "fieldName", label: "Field / Paddock", type: "text", section: "Test Details" },
+      { key: "labReference", label: "Lab Reference", type: "text", section: "Test Details" },
+      { key: "pH", label: "pH", type: "number", section: "Nutrient Levels" },
+      { key: "organicMatterPct", label: "Organic Matter (%)", type: "number", section: "Nutrient Levels" },
+      { key: "nitrogenKgHa", label: "Nitrogen (kg/ha)", type: "number", section: "Nutrient Levels" },
+      { key: "phosphorusKgHa", label: "Phosphorus (kg/ha)", type: "number", section: "Nutrient Levels" },
+      { key: "potassiumKgHa", label: "Potassium (kg/ha)", type: "number", section: "Nutrient Levels" },
+      { key: "calciumKgHa", label: "Calcium (kg/ha)", type: "number", section: "Nutrient Levels" },
+      { key: "sulphurKgHa", label: "Sulphur (kg/ha)", type: "number", section: "Nutrient Levels" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.soilTests).where(eq(schema.soilTests.farmId, farmId)).orderBy(desc(schema.soilTests.testDate)) as unknown as Promise<Record<string, unknown>[]>,
@@ -893,17 +988,17 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "wofExpiry", label: "WoF Expiry", type: "date" },
     ],
     formFields: [
-      { key: "name", label: "Asset Name", type: "text", required: true },
-      { key: "assetType", label: "Type", type: "select", optionsKey: "equipment-type" },
-      { key: "make", label: "Make", type: "text" },
-      { key: "model", label: "Model", type: "text" },
-      { key: "serialNumber", label: "Serial Number", type: "text" },
-      { key: "purchaseDate", label: "Purchase Date", type: "date" },
-      { key: "purchasePrice", label: "Purchase Price", type: "number" },
-      { key: "lastServiceDate", label: "Last Service Date", type: "date" },
-      { key: "nextServiceDate", label: "Next Service Date", type: "date" },
-      { key: "wofExpiry", label: "WoF Expiry", type: "date" },
-      { key: "cofExpiry", label: "CoF Expiry", type: "date" },
+      { key: "name", label: "Asset Name", type: "text", required: true, section: "Asset Details" },
+      { key: "assetType", label: "Type", type: "select", optionsKey: "equipment-type", section: "Asset Details" },
+      { key: "make", label: "Make", type: "text", section: "Asset Details" },
+      { key: "model", label: "Model", type: "text", section: "Asset Details" },
+      { key: "serialNumber", label: "Serial Number", type: "text", section: "Asset Details" },
+      { key: "purchaseDate", label: "Purchase Date", type: "date", section: "Purchase Info" },
+      { key: "purchasePrice", label: "Purchase Price", type: "number", section: "Purchase Info" },
+      { key: "lastServiceDate", label: "Last Service Date", type: "date", section: "Service & Compliance" },
+      { key: "nextServiceDate", label: "Next Service Date", type: "date", section: "Service & Compliance" },
+      { key: "wofExpiry", label: "WoF Expiry", type: "date", section: "Service & Compliance" },
+      { key: "cofExpiry", label: "CoF Expiry", type: "date", section: "Service & Compliance" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.equipmentAssets).where(eq(schema.equipmentAssets.farmId, farmId)).orderBy(asc(schema.equipmentAssets.name)) as unknown as Promise<Record<string, unknown>[]>,
@@ -932,17 +1027,17 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       { key: "completedDate", label: "Completed", type: "date" },
     ],
     formFields: [
-      { key: "checkName", label: "Check Name", type: "text", required: true },
-      { key: "category", label: "Category", type: "select", optionsKey: "compliance-category" },
-      { key: "countryProfile", label: "Country Profile", type: "text" },
-      { key: "status", label: "Status", type: "select", required: true, options: [
+      { key: "checkName", label: "Check Name", type: "text", required: true, section: "Check Details" },
+      { key: "category", label: "Category", type: "select", optionsKey: "compliance-category", section: "Check Details" },
+      { key: "countryProfile", label: "Country Profile", type: "text", section: "Check Details" },
+      { key: "status", label: "Status", type: "select", required: true, section: "Schedule", options: [
         { value: "PENDING", label: "Pending" },
         { value: "IN_PROGRESS", label: "In Progress" },
         { value: "DONE", label: "Done" },
         { value: "OVERDUE", label: "Overdue" },
       ]},
-      { key: "dueDate", label: "Due Date", type: "date" },
-      { key: "completedDate", label: "Completed Date", type: "date" },
+      { key: "dueDate", label: "Due Date", type: "date", section: "Schedule" },
+      { key: "completedDate", label: "Completed Date", type: "date", section: "Schedule" },
       { key: "notes", label: "Notes", type: "textarea" },
     ],
     list: async (farmId) => (await getDb()).select().from(schema.complianceChecks).where(eq(schema.complianceChecks.farmId, farmId)).orderBy(asc(schema.complianceChecks.dueDate)) as unknown as Promise<Record<string, unknown>[]>,
@@ -1838,6 +1933,202 @@ const CHILD_MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
     ],
   }),
 
+  // ─── Forestry child adapters ──────────────────────────────────────────────
+
+  "forestry-plantings": makeChildAdapter({
+    moduleId: "forestry-plantings",
+    label: "Plantings",
+    table: schema.forestPlantings,
+    parentTable: schema.forestBlocks,
+    parentIdField: "blockId",
+    parentLabel: "Block",
+    parentLabelField: "name",
+    parentOptionsModuleId: "forestry",
+    dateField: "date",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "species", label: "Species" },
+      { key: "seedlingsPlanted", label: "Seedlings", type: "number" },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "species", label: "Species", type: "select", optionsKey: "forestry-species", required: true },
+      { key: "seedlingsPlanted", label: "Seedlings Planted", type: "number", required: true },
+      { key: "areaHa", label: "Area (ha)", type: "number", required: true },
+      { key: "spacing", label: "Spacing", type: "text" },
+      { key: "supplier", label: "Supplier", type: "text" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  "forestry-thinnings": makeChildAdapter({
+    moduleId: "forestry-thinnings",
+    label: "Thinnings",
+    table: schema.forestThinnings,
+    parentTable: schema.forestBlocks,
+    parentIdField: "blockId",
+    parentLabel: "Block",
+    parentLabelField: "name",
+    parentOptionsModuleId: "forestry",
+    dateField: "date",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "volumeM3", label: "Volume (m³)", type: "number" },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+      { key: "avgStemDiamCm", label: "Avg Diam (cm)", type: "number" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "volumeM3", label: "Volume (m³)", type: "number", required: true },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+      { key: "avgStemDiamCm", label: "Avg Stem Diam (cm)", type: "number" },
+      { key: "harvester", label: "Harvester", type: "text" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  "forestry-harvests": makeChildAdapter({
+    moduleId: "forestry-harvests",
+    label: "Harvests",
+    table: schema.forestHarvests,
+    parentTable: schema.forestBlocks,
+    parentIdField: "blockId",
+    parentLabel: "Block",
+    parentLabelField: "name",
+    parentOptionsModuleId: "forestry",
+    dateField: "date",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "volumeM3", label: "Volume (m³)", type: "number" },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+      { key: "buyer", label: "Buyer" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "volumeM3", label: "Volume (m³)", type: "number", required: true },
+      { key: "areaHa", label: "Area (ha)", type: "number" },
+      { key: "avgStemDiamCm", label: "Avg Stem Diam (cm)", type: "number" },
+      { key: "buyer", label: "Buyer", type: "text" },
+      { key: "pricePerM3", label: "Price / m³", type: "number" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  // ─── Mushroom child adapters ──────────────────────────────────────────────
+
+  "mushroom-crops": makeChildAdapter({
+    moduleId: "mushroom-crops",
+    label: "Crops",
+    table: schema.mushroomCrops,
+    parentTable: schema.mushroomRooms,
+    parentIdField: "roomId",
+    parentLabel: "Room",
+    parentLabelField: "name",
+    parentOptionsModuleId: "mushroom",
+    dateField: "spawnDate",
+    columns: [
+      { key: "species", label: "Species" },
+      { key: "spawnDate", label: "Spawned", type: "date" },
+      { key: "status", label: "Status" },
+      { key: "totalYieldKg", label: "Yield (kg)", type: "number" },
+    ],
+    formFields: [
+      { key: "species", label: "Species", type: "select", optionsKey: "mushroom-species", required: true },
+      { key: "substrateType", label: "Substrate Type", type: "select", optionsKey: "mushroom-substrate" },
+      { key: "spawnDate", label: "Spawn Date", type: "date", required: true },
+      { key: "spawnSource", label: "Spawn Source", type: "text" },
+      { key: "casingDate", label: "Casing Date", type: "date" },
+      { key: "firstHarvestDate", label: "First Harvest Date", type: "date" },
+      { key: "lastHarvestDate", label: "Last Harvest Date", type: "date" },
+      { key: "status", label: "Status", type: "select", optionsKey: "mushroom-status" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  "mushroom-harvests": makeChildAdapter({
+    moduleId: "mushroom-harvests",
+    label: "Harvests",
+    table: schema.mushroomHarvests,
+    parentTable: schema.mushroomCrops,
+    parentIdField: "cropId",
+    parentLabel: "Crop",
+    parentLabelField: "species",
+    parentOptionsModuleId: "mushroom",
+    dateField: "date",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "kg", label: "Kg", type: "number" },
+      { key: "grade", label: "Grade" },
+      { key: "pricePerKg", label: "Price/kg", type: "number" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "kg", label: "Kg", type: "number", required: true },
+      { key: "grade", label: "Grade", type: "text" },
+      { key: "buyer", label: "Buyer", type: "text" },
+      { key: "pricePerKg", label: "Price / kg", type: "number" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  // ─── Nursery child adapters ───────────────────────────────────────────────
+
+  "nursery-propagation": makeChildAdapter({
+    moduleId: "nursery-propagation",
+    label: "Propagation",
+    table: schema.nurseryPropagation,
+    parentTable: schema.nurseryBeds,
+    parentIdField: "bedId",
+    parentLabel: "Bed",
+    parentLabelField: "name",
+    parentOptionsModuleId: "nursery",
+    dateField: "seededDate",
+    columns: [
+      { key: "species", label: "Species" },
+      { key: "seededDate", label: "Seeded", type: "date" },
+      { key: "trayCount", label: "Trays", type: "number" },
+      { key: "status", label: "Status" },
+    ],
+    formFields: [
+      { key: "species", label: "Species", type: "select", optionsKey: "nursery-species", required: true },
+      { key: "variety", label: "Variety", type: "text" },
+      { key: "seededDate", label: "Seeded Date", type: "date", required: true },
+      { key: "trayCount", label: "Tray Count", type: "number", required: true },
+      { key: "cellsPerTray", label: "Cells per Tray", type: "number" },
+      { key: "germinationPct", label: "Germination %", type: "number" },
+      { key: "expectedReadyDate", label: "Expected Ready Date", type: "date" },
+      { key: "status", label: "Status", type: "select", optionsKey: "nursery-status" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
+  "nursery-transplants": makeChildAdapter({
+    moduleId: "nursery-transplants",
+    label: "Transplants",
+    table: schema.nurseryTransplants,
+    parentTable: schema.nurseryPropagation,
+    parentIdField: "propagationId",
+    parentLabel: "Propagation",
+    parentLabelField: "species",
+    parentOptionsModuleId: "nursery",
+    dateField: "date",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "plantCount", label: "Plants", type: "number" },
+      { key: "destination", label: "Destination" },
+      { key: "pricePerPlant", label: "Price/plant", type: "number" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "plantCount", label: "Plant Count", type: "number", required: true },
+      { key: "destination", label: "Destination", type: "text" },
+      { key: "buyer", label: "Buyer", type: "text" },
+      { key: "pricePerPlant", label: "Price per Plant", type: "number" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+  }),
+
   // Two child tables are farm-scoped directly (no parent record to pick), so they
   // follow the plain top-level adapter shape instead of `makeChildAdapter`.
   "pest-spray-log-events": {
@@ -2004,6 +2295,22 @@ export const MODULE_TAB_GROUPS: Record<string, { id: string; label: string }[]> 
     { id: "pasture", label: "Paddocks" },
     { id: "pasture-rotations", label: "Rotations" },
     { id: "pasture-cover", label: "Cover Records" },
+  ],
+  forestry: [
+    { id: "forestry", label: "Blocks" },
+    { id: "forestry-plantings", label: "Plantings" },
+    { id: "forestry-thinnings", label: "Thinnings" },
+    { id: "forestry-harvests", label: "Harvests" },
+  ],
+  mushroom: [
+    { id: "mushroom", label: "Rooms" },
+    { id: "mushroom-crops", label: "Crops" },
+    { id: "mushroom-harvests", label: "Harvests" },
+  ],
+  nursery: [
+    { id: "nursery", label: "Beds" },
+    { id: "nursery-propagation", label: "Propagation" },
+    { id: "nursery-transplants", label: "Transplants" },
   ],
 };
 

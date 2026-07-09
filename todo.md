@@ -242,7 +242,7 @@
 - [x] Run `pnpm typecheck` — all packages pass
 - [ ] Test end-to-end in the dev server: for at least sheep, bees, and pest-spray-log, open the new tabs, create a record via the parent picker, and confirm the corresponding `reminder-sources.ts` alert (drenching/inspection/spray withholding) now actually fires
 
-## Phase 19 — Reference Data Expansion + Usability ✅ (partial)
+## Phase 19 — Reference Data Expansion + Usability ✅
 > Same review: `DEFAULT_OPTIONS` existed but was thin and NZ/AU-biased despite 10
 > supported country profiles, and several obvious categories (fertiliser, feed,
 > treatment type, pasture species, units) were missing entirely.
@@ -250,7 +250,7 @@
 - [x] Add new reference categories: `fertiliser-type`, `feed-type`, `treatment-type`, `pasture-species`, `unit-of-measure`, `movement-type`
 - [x] Wire new categories into existing free-text fields: `pasture.grassType` → `pasture-species`; `input-prices`/`output-prices`/`inventory.unit` → `unit-of-measure`; new sub-table fields (`dairyHealthEvents.eventType` → `treatment-type`, `pigFeedRecords.feedType`/`aquaFeedingEvents.feedType` → `feed-type`, `vegSuccessions.cropVariety`/`aquaPlantYields.cropVariety` → `crop-variety`)
 - [x] Usability: prefill date fields with today's date when opening the "+ Add" form (drenching, milking, spraying and similar day-to-day logging no longer needs the date re-picked every time)
-- [ ] Usability: reorder/filter reference-data dropdown options by the farm's active country profile instead of one flat global list
-- [ ] Usability: bulk entry — log the same event (drenching, weighing) against multiple animals/flocks in one submission
-- [ ] Usability: "setup completeness" nudge on the dashboard for empty reference-heavy modules (e.g. "no chemicals registered yet" on Pest & Spray Log), linking straight to the add form
+- [x] Usability: reorder/filter reference-data dropdown options by the farm's active country profile instead of one flat global list
+- [x] Usability: bulk entry — log the same event (drenching, weighing) against multiple animals/flocks in one submission
+- [x] Usability: "setup completeness" nudge on the dashboard for empty reference-heavy modules (e.g. "no chemicals registered yet" on Pest & Spray Log), linking straight to the add form
 - [ ] Reference data: `fertiliser-type` has no natural field to attach to yet (no fertiliser-application schema) — revisit once/if a dedicated fertiliser-application record is added

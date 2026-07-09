@@ -1,5 +1,6 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
@@ -12,12 +13,15 @@ import { useCountryProfile } from "../context/FarmSettingsContext.js";
 import { MODULE_REGISTRY, getDb } from "@tpt/core";
 import { farms, sprayEvents, chemicals } from "@tpt/core/schema";
 import { eq, and, gt, asc } from "drizzle-orm";
-import { useModuleList, useModuleCreate, useModuleUpdate, useModuleDelete, getModuleAdapter } from "../modules/use-module-query.js";
+import { useModuleList, useModuleCreate, useModuleUpdate, useModuleDelete, useModuleBulkCreate, getModuleAdapter } from "../modules/use-module-query.js";
 import { MODULE_TAB_GROUPS } from "../modules/registry.js";
 import { generateChemicalRegisterPdf, downloadPdf } from "../utils/pdf-export.js";
+import { exportCsv } from "../utils/csv-export.js";
+import { CsvImportDialog } from "../components/CsvImportDialog.js";
 import { PlantingCalendar } from "../components/PlantingCalendar.js";
 import { SelectWithCustom } from "../components/SelectWithCustom.js";
 import { ForeignKeySelect } from "../components/ForeignKeySelect.js";
+import { PhotoAttachments } from "../components/PhotoAttachments.js";
 
 type SortDir = "asc" | "desc";
 
@@ -48,18 +52,29 @@ export function ModulePage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [viewMode, setViewMode] = useState<"table" | "calendar" | "roi">("table");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [photoRecordId, setPhotoRecordId] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     setActiveTabId(moduleId ?? "");
     setShowForm(false);
     setEditingId(null);
     setViewMode("table");
+    setBulkMode(false);
+    setSelectedIds(new Set());
+    setCurrentPage(1);
   }, [moduleId]);
 
+  const queryClient = useQueryClient();
   const { data: items = [], isLoading } = useModuleList(activeModuleId, farmId ?? undefined);
   const createMutation = useModuleCreate(activeModuleId, farmId ?? "");
   const updateMutation = useModuleUpdate(activeModuleId, farmId ?? "");
   const deleteMutation = useModuleDelete(activeModuleId, farmId ?? "");
+  const bulkCreateMutation = useModuleBulkCreate(activeModuleId, farmId ?? "");
 
   // Fetch farm name for PDF export
   const { data: farmData } = useQuery({
@@ -167,7 +182,12 @@ export function ModulePage() {
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
     const data: Record<string, unknown> = {};
+    let parentIdField: string | undefined;
     for (const field of mod.formFields) {
+      if (field.foreignKey) {
+        parentIdField = field.key;
+        if (bulkMode) continue; // In bulk mode, parent IDs come from selected rows
+      }
       const raw = formValues[field.key];
       if (raw === "" || raw === undefined) {
         if (!field.required) continue;
@@ -183,7 +203,22 @@ export function ModulePage() {
       }
     }
 
-    if (editingId) {
+    if (bulkMode && parentIdField) {
+      bulkCreateMutation.mutate(
+        { parentIds: Array.from(selectedIds), parentIdField, data },
+        {
+          onSuccess: () => {
+            setShowForm(false);
+            setSelectedIds(new Set());
+            setBulkMode(false);
+            toast.success(`${mod.label.replace(/s$/, "")} created for ${selectedIds.size} records`);
+          },
+          onError: (err) => {
+            toast.error(err instanceof Error ? err.message : "Failed to create records");
+          },
+        }
+      );
+    } else if (editingId) {
       updateMutation.mutate(
         { id: editingId, data },
         {
@@ -263,6 +298,11 @@ export function ModulePage() {
       .sort((a, b) => b.profit - a.profit);
   }, [items, moduleId]);
 
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredItems = useMemo(() => {
     let result = items;
 
@@ -307,11 +347,46 @@ export function ModulePage() {
     return result;
   }, [items, searchQuery, sortKey, sortDir, mod.columns]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedItems = filteredItems.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+  function handleCsvImport(rows: Record<string, unknown>[]) {
+    if (!mod.create || !farmId) return;
+    let created = 0;
+    let failed = 0;
+    const promises = rows.map(async (row) => {
+      try {
+        await mod.create!(farmId, row);
+        created++;
+      } catch {
+        failed++;
+      }
+    });
+    Promise.all(promises).then(() => {
+      toast.success(`Imported ${created} ${mod.label.toLowerCase()}${failed > 0 ? ` (${failed} failed)` : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["module-list", activeModuleId, farmId] });
+    });
+  }
+
   return (
     <DashboardShell
       title={meta.name}
       actions={
         <div className="flex items-center gap-2">
+          {items.length > 0 && (
+            <Button variant="secondary" onClick={() => {
+              exportCsv(`${mod.label}-${new Date().toISOString().slice(0, 10)}.csv`, mod.columns, filteredItems);
+              toast.success("CSV exported");
+            }}>
+              Export CSV
+            </Button>
+          )}
+          {mod.create && (
+            <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
+              Import CSV
+            </Button>
+          )}
           {moduleId === "pest-spray-log" && activeModuleId === moduleId && items.length > 0 && (
             <Button variant="secondary" onClick={handleExportPdf}>
               Export PDF
@@ -333,8 +408,16 @@ export function ModulePage() {
               {viewMode === "table" ? "ROI View" : "Table View"}
             </Button>
           )}
-          {mod.create && (
+          {mod.create && !bulkMode && (
             <Button onClick={openCreateForm}>+ Add {mod.label.replace(/s$/, "")}</Button>
+          )}
+          {mod.create && bulkMode && selectedIds.size > 0 && (
+            <Button onClick={openCreateForm}>Bulk Add ({selectedIds.size})</Button>
+          )}
+          {mod.create && mod.formFields.some((f) => f.foreignKey) && (
+            <Button variant="secondary" onClick={() => { setBulkMode((b) => !b); setSelectedIds(new Set()); }}>
+              {bulkMode ? "Cancel Bulk" : "Bulk Entry"}
+            </Button>
           )}
         </div>
       }
@@ -359,58 +442,88 @@ export function ModulePage() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && (() => {
+        // Group form fields by section. Fields without a section go in the default group.
+        const visibleFields = mod.formFields.filter((f) => !(bulkMode && f.foreignKey));
+        const sections = new Map<string, typeof visibleFields>();
+        for (const field of visibleFields) {
+          const key = field.section ?? "";
+          const group = sections.get(key) ?? [];
+          group.push(field);
+          sections.set(key, group);
+        }
+        const hasSections = visibleFields.some((f) => f.section);
+        const sectionEntries = Array.from(sections.entries());
+
+        return (
         <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-700">
             {editingId ? "Edit" : "New"} {mod.label.replace(/s$/, "")}
           </h3>
           <form onSubmit={handleFormSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {mod.formFields.map((field) => (
-              <div key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
-                  {field.label}
-                </label>
-                {field.type === "select" && field.foreignKey ? (
-                  <ForeignKeySelect
-                    farmId={farmId}
-                    moduleId={field.foreignKey.moduleId}
-                    labelField={field.foreignKey.labelField}
-                    value={formValues[field.key] ?? ""}
-                    onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
-                    placeholder={`Select ${field.label}`}
-                    required={field.required}
-                  />
-                ) : field.type === "select" && field.optionsKey ? (
-                  <SelectWithCustom
-                    farmId={farmId}
-                    listKey={field.optionsKey}
-                    value={formValues[field.key] ?? ""}
-                    onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
-                    placeholder={`Select ${field.label}`}
-                    required={field.required}
-                  />
-                ) : field.type === "select" ? (
-                  <Select
-                    value={formValues[field.key] ?? ""}
-                    onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                    options={field.options ?? []}
-                    placeholder={`Select ${field.label}`}
-                  />
-                ) : field.type === "textarea" ? (
-                  <textarea
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500"
-                    rows={3}
-                    value={formValues[field.key] ?? ""}
-                    onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                  />
-                ) : (
-                  <Input
-                    type={field.type}
-                    value={formValues[field.key] ?? ""}
-                    onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                    placeholder={field.placeholder}
-                  />
+            {sectionEntries.map(([sectionName, fields], si) => (
+              <div key={sectionName || si} className={sectionEntries.length > 1 ? "sm:col-span-2" : ""}>
+                {hasSections && sectionName && (
+                  <h4 className="mb-2 mt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {sectionName}
+                  </h4>
                 )}
+                {hasSections && !sectionName && si > 0 && (
+                  <h4 className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Details
+                  </h4>
+                )}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {fields.map((field) => (
+                  <div key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      {field.label}
+                    </label>
+                    {field.type === "select" && field.foreignKey ? (
+                      <ForeignKeySelect
+                        farmId={farmId}
+                        moduleId={field.foreignKey.moduleId}
+                        labelField={field.foreignKey.labelField}
+                        value={formValues[field.key] ?? ""}
+                        onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
+                        placeholder={`Select ${field.label}`}
+                        required={field.required}
+                      />
+                    ) : field.type === "select" && field.optionsKey ? (
+                      <SelectWithCustom
+                        farmId={farmId}
+                        countryId={countryProfile?.id}
+                        listKey={field.optionsKey}
+                        value={formValues[field.key] ?? ""}
+                        onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
+                        placeholder={`Select ${field.label}`}
+                        required={field.required}
+                      />
+                    ) : field.type === "select" ? (
+                      <Select
+                        value={formValues[field.key] ?? ""}
+                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                        options={field.options ?? []}
+                        placeholder={`Select ${field.label}`}
+                      />
+                    ) : field.type === "textarea" ? (
+                      <textarea
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500"
+                        rows={3}
+                        value={formValues[field.key] ?? ""}
+                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                      />
+                    ) : (
+                      <Input
+                        type={field.type}
+                        value={formValues[field.key] ?? ""}
+                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                        placeholder={field.placeholder}
+                      />
+                    )}
+                  </div>
+                ))}
+                </div>
               </div>
             ))}
             <div className="flex gap-2 sm:col-span-2">
@@ -423,7 +536,8 @@ export function ModulePage() {
             </div>
           </form>
         </div>
-      )}
+        );
+      })()}
 
       {/* Withholding Period Alerts */}
       {withholdingAlerts.length > 0 && (
@@ -519,6 +633,12 @@ export function ModulePage() {
         </div>
       ) : (
         <>
+          {/* Bulk Mode Hint */}
+          {bulkMode && (
+            <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">
+              Bulk entry mode: check the items to log against, then click "Bulk Add ({selectedIds.size})".
+            </div>
+          )}
           {/* Search / Filter */}
           <div className="mb-3">
             <Input
@@ -534,6 +654,22 @@ export function ModulePage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
+                  {bulkMode && (
+                    <th className="w-10 px-2 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === paginatedItems.length && paginatedItems.length > 0}
+                        onChange={() => {
+                          if (selectedIds.size === paginatedItems.length) {
+                            setSelectedIds(new Set());
+                          } else {
+                            setSelectedIds(new Set(paginatedItems.map((item) => String(item.id))));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </th>
+                  )}
                   {mod.columns.map((col) => (
                     <th
                       key={col.key}
@@ -558,17 +694,48 @@ export function ModulePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredItems.map((item) => (
-                  <tr key={String(item.id)} className="hover:bg-gray-50">
-                    {mod.columns.map((col) => (
+                  {bulkMode && filteredItems.length === 0 && (
+                    <tr>
+                      <td colSpan={mod.columns.length + 2} className="px-4 py-4 text-center text-sm text-gray-500">
+                        Select items from the table to bulk-add records
+                      </td>
+                    </tr>
+                  )}
+                  {paginatedItems.map((item) => (
+                    <>
+                    <tr key={String(item.id)} className={`hover:bg-gray-50 ${selectedIds.has(String(item.id)) ? "bg-green-50" : ""}`}>
+                      {bulkMode && (
+                        <td className="w-10 px-2 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(String(item.id))}
+                            onChange={() => {
+                              const next = new Set(selectedIds);
+                              if (next.has(String(item.id))) {
+                                next.delete(String(item.id));
+                              } else {
+                                next.add(String(item.id));
+                              }
+                              setSelectedIds(next);
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                        </td>
+                      )}
+                      {mod.columns.map((col) => (
                       <td key={col.key} className="px-4 py-2.5 text-gray-700">
                         {formatValue(item[col.key], col)}
                       </td>
                     ))}
-                    {(mod.update || mod.delete) && (
-                      <td className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {mod.update && (
+                      {(mod.update || mod.delete) && (
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {farmId && (
+                              <Button variant="ghost" size="sm" onClick={() => setPhotoRecordId(photoRecordId === String(item.id) ? null : String(item.id))}>
+                                {photoRecordId === String(item.id) ? "Hide" : "Photos"}
+                              </Button>
+                            )}
+                            {mod.update && (
                             <Button variant="ghost" size="sm" onClick={() => openEditForm(item)}>
                               Edit
                             </Button>
@@ -594,10 +761,18 @@ export function ModulePage() {
                       </td>
                     )}
                   </tr>
-                ))}
+                  {photoRecordId === String(item.id) && farmId != null ? (
+                    <tr>
+                      <td colSpan={99} className="bg-gray-50 px-4 pb-3">
+                        <PhotoAttachments farmId={farmId} moduleId={activeModuleId} recordId={String(item.id)} />
+                      </td>
+                    </tr>
+                  ) : null}
+                    </>
+                  ))}
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan={mod.columns.length + (mod.update || mod.delete ? 1 : 0)} className="px-4 py-4 text-center text-gray-500">
+                    <td colSpan={mod.columns.length + (mod.update || mod.delete ? 1 : 0) + (bulkMode ? 1 : 0)} className="px-4 py-4 text-center text-gray-500">
                       No matching {mod.label.toLowerCase()} found.
                     </td>
                   </tr>
@@ -605,8 +780,74 @@ export function ModulePage() {
               </tbody>
             </table>
           </div>
+          {filteredItems.length > 0 && (
+            <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                >
+                  {[10, 25, 50, 100].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <span className="ml-2">
+                  {(safeCurrentPage - 1) * pageSize + 1}–{Math.min(safeCurrentPage * pageSize, filteredItems.length)} of {filteredItems.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </Button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 7) {
+                    page = i + 1;
+                  } else if (safeCurrentPage <= 4) {
+                    page = i + 1;
+                  } else if (safeCurrentPage >= totalPages - 3) {
+                    page = totalPages - 6 + i;
+                  } else {
+                    page = safeCurrentPage - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === safeCurrentPage ? "primary" : "ghost"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
+      <CsvImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleCsvImport}
+        formFields={mod.formFields}
+        label={mod.label}
+      />
     </DashboardShell>
   );
 }

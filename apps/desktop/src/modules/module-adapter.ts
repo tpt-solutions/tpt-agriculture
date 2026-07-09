@@ -23,6 +23,9 @@ export interface FormFieldDef {
    * form submission converts the "true"/"false" string to an actual boolean. */
   boolean?: true;
   placeholder?: string;
+  /** Optional section heading — fields sharing the same section string are grouped
+   *  under a heading in the form. Fields without a section render in the default group. */
+  section?: string;
 }
 
 export interface ModuleAdapter {

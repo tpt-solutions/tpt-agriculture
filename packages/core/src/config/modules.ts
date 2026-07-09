@@ -70,6 +70,24 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     description: "Fish stock and grow beds, water quality (pH/ammonia/nitrate/DO), feeding schedules, plant bed yields",
     billingUnit: "sqm",
   },
+  forestry: {
+    name: "Forestry",
+    category: "horticulture",
+    description: "Forest blocks, planting records, thinning, harvest volumes and pricing",
+    billingUnit: "hectares",
+  },
+  mushroom: {
+    name: "Mushroom Production",
+    category: "horticulture",
+    description: "Growing rooms, crops, flushes, harvest grading and pricing",
+    billingUnit: "sqm",
+  },
+  nursery: {
+    name: "Plant Nursery",
+    category: "horticulture",
+    description: "Propagation beds, seedling trays, transplants, plant sales",
+    billingUnit: "sqm",
+  },
 
   // ─── Livestock ──────────────────────────────────────────────────────────────
   "cattle-dairy": {

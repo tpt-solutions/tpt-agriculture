@@ -189,10 +189,10 @@
 - [x] **Soil & Water** — soil test records (pH, nutrient levels), nutrient budgets over time. Schema: `soil_tests` table. ModuleAdapter in `registry.ts`. Reference options for field selection.
 - [x] **Inventory** — chemical/seed/feed/fertiliser stock levels + movements, low-stock alerts; feeds Decision Support. Schema: `inventory_items` + `inventory_movements` tables. ModuleAdapter shows items with reorder-level alerts surfaced in Decision Support.
 - [x] **Weather spray-window calculator** — `WeatherPage.tsx` at `/modules/weather`. Fetches Open-Meteo 5-day hourly forecast; colour-codes each hour Good/Marginal/Poor based on wind (<15 kph), rain (<0.1 mm/h), humidity (<85%), temp (8–28°C). Shows best spray hour per day.
-- [x] **Equipment** — asset register, maintenance log, WOF/COF reminders. Schema: `equipment_assets` table. ModuleAdapter with service/WoF/CoF date tracking; overdue/due-soon alerts surface in Decision Support.
+- [x] **Equipment** — asset register, maintenance log, WOF/COF reminders. Schema: `equipment_assets` table. ModuleAdapter with service/WoF/COF date tracking; overdue/due-soon alerts surface in Decision Support.
 - [x] **Compliance** — regulatory checklist per country profile. Schema: `compliance_checks` table with PENDING/IN_PROGRESS/DONE/OVERDUE statuses. ModuleAdapter wired to `compliance-category` reference data.
 - [x] **Staff** — roster/timesheets/contractor records. Schema: `staff_members` table with EMPLOYEE/CONTRACTOR/SEASONAL contract types. ModuleAdapter wired to `staff-role` reference data.
-- [x] **Decision-support / "best strategy for the farm"** — `DecisionSupportPage.tsx` at `/modules/decision-support`. Rules-based advisory reading soil tests (pH < 5.5, low OM, low N), financials (negative 30-day cashflow), equipment (service/WoF/CoF overdue or due within 30 days), inventory (stock at or below reorder level). Sorted high→medium→low priority. Added to MODULE_REGISTRY.
+- [x] **Decision-support / "best strategy for the farm"** — `DecisionSupportPage.tsx` at `/modules/decision-support`. Rules-based advisory reading soil tests (pH < 5.5, low OM, low N), financials (negative 30-day cashflow), equipment (service/WoF/COF overdue or due within 30 days), inventory (stock at or below reorder level). Sorted high→medium→low priority. Added to MODULE_REGISTRY.
 
 ## Phase 16 — Bug Fixes (Platform Review, 2026-07-02) ✅
 > Findings from a full platform review (bugs, TODOs, missing wiring, commercial-FMIS
@@ -234,12 +234,12 @@
 > visibility, and a simpler/collapsible sidebar. Full plan: see `20260710`
 > session plan file (button-fix session) — six ordered, mostly-independent
 > sub-phases; later ones build on earlier foundations.
-- [ ] **20a — Compliance & field tracking**: auto-calculate spray withholding end dates from `applicationDate + chemical.withholdingPeriodDays`; warn-with-override on harvest-tracking entries for fields with an active withholding period; new fertiliser-application log (new `fertiliserApplications` table, tab under Soil & Water); equipment category filter-chip/group-by polish
-- [ ] **20b — Crop rotation visibility**: per-field planting-history modal (past seasons' variety/dates/status) — no plant-family logic, visibility only
-- [ ] **20c — Sidebar collapsible categories**: group nav links by `MODULE_REGISTRY` category with collapsible sections (localStorage-persisted), derive the nav list from the registry instead of a hand-maintained array (closes the class of bug fixed in Phase 19b)
-- [ ] **20d — Calendar aggregation foundation**: `dateFields` on `ModuleAdapter`, generic cross-module event scanner (`getFarmCalendarEvents`), trim `reminder-sources.ts` to just the derived (non-column) sources
-- [ ] **20e — General-purpose task-template engine**: new `taskTemplates` + `farmTasks` tables; migrate existing `planting_tasks` data into `farmTasks` and retire the old table/adapter; seed catalog + auto-trigger on crop-plan/livestock-group creation (dairy excluded — no herd-level entity); new "Tasks" and "Task Templates" modules/UI
-- [ ] **20f — Whole-farm calendar UI**: new `/calendar` route with a real month/day grid merging 20d+20e+trimmed reminder events; "+ Add Task" for ad hoc entries (transport/pickers); surface `farmTasks` in the existing notification bell/dashboard upcoming-events strip
+- [x] **20a — Compliance & field tracking**: auto-calculate spray withholding end dates from `applicationDate + chemical.withholdingPeriodDays`; warn-with-override on harvest-tracking entries for fields with an active withholding period; new fertiliser-application log (new `fertiliserApplications` table, tab under Soil & Water); equipment category filter-chip/group-by polish
+- [x] **20b — Crop rotation visibility**: per-field planting-history modal (past seasons' variety/dates/status) — no plant-family logic, visibility only
+- [x] **20c — Sidebar collapsible categories**: group nav links by `MODULE_REGISTRY` category with collapsible sections (localStorage-persisted), derive the nav list from the registry instead of a hand-maintained array (closes the class of bug fixed in Phase 19b)
+- [x] **20d — Calendar aggregation foundation**: `dateFields` on `ModuleAdapter`, generic cross-module event scanner (`getFarmCalendarEvents`), trim `reminder-sources.ts` to just the derived (non-column) sources
+- [x] **20e — General-purpose task-template engine**: new `taskTemplates` + `farmTasks` tables; migrate existing `planting_tasks` data into `farmTasks` and retire the old table/adapter; seed catalog + auto-trigger on crop-plan/livestock-group creation (dairy excluded — no herd-level entity); new "Tasks" and "Task Templates" modules/UI
+- [x] **20f — Whole-farm calendar UI**: new `/calendar` route with a real month/day grid merging 20d+20e+trimmed reminder events; "+ Add Task" for ad hoc entries (transport/pickers); surface `farmTasks` in the existing notification bell/dashboard upcoming-events strip
 
 ## Phase 17 — Commercial FMIS Feature Gaps (flagged for prioritization, not yet scheduled)
 > Gaps identified by comparing against commercial FMIS products (Figured, CashManager,
@@ -247,13 +247,13 @@
 > the user on sequencing. Per-country regulatory features should follow the existing
 > `country-profiles.ts` pluggable pattern (like the weather provider registry and
 > `regulatory.chemicalRegNumber` label overrides), not be hardcoded to one country.
-- [ ] Livestock traceability integration — legal requirement in many of the 10 supported country profiles (e.g. NAIT for NZ, NLIS for AU, similar schemes elsewhere); design as a per-country-profile pluggable integration (config entry + optional API adapter) rather than NZ-only, extending the same pattern used for weather providers
+- [x] Livestock traceability integration — legal requirement in many of the 10 supported country profiles (e.g. NAIT for NZ, NLIS for AU, similar schemes elsewhere); design as a per-country-profile pluggable integration (config entry + optional API adapter) rather than NZ-only, extending the same pattern used for weather providers
 - [ ] Photo/media attachments on records — standard in every modern FMIS, absent from all 19 modules
-- [ ] Reporting/export — CSV/PDF farm report generation for accountant/bank use (beyond the existing narrow pest-spray-log PDF)
+- [x] Reporting/export — CSV/PDF farm report generation for accountant/bank use (beyond the existing narrow pest-spray-log PDF)
 - [x] Notifications/reminders system — pluggable `ReminderSource` registry (`apps/desktop/src/notifications/reminder-sources.ts`) computing due-date alerts from existing data: spray withholding, sheep drenching meat withholding, planned harvests/plantings, pig weaning, bee hive inspections (21-day interval heuristic). Per-farm lead-time + mute-by-source config lives in `farms.settingsJson.notifications`, editable at `settings/notifications`. Surfaced via a bell icon + popover in `AppLayout` (overdue/due-soon/upcoming severity) and the dashboard's upcoming-events strip, both now driven by the same registry instead of duplicated queries. WOF/COF and low-stock alerts deferred — no Equipment/Inventory schema exists yet (Phase 15), so the registry has no data source for them; wiring is a 5-minute addition once those modules land.
 - [ ] Accounting export integration — pluggable accounting-software connectors for the Financials module (start with Xero; design so other providers can be added later rather than hardcoding to Xero/MYOB)
-- [ ] Audit trail / change history on records — for compliance and dispute resolution
-- [ ] Analytics/KPI dashboards — trend charts (production over time, yield/ha by season), not just current-state tables
+- [x] Audit trail / change history on records — for compliance and dispute resolution
+- [x] Analytics/KPI dashboards — trend charts (production over time, yield/ha by season), not just current-state tables
 - [ ] GIS/mapping — paddock boundaries, satellite overlay for `field-management`
 - [ ] Barcode/QR/RFID scanning — livestock tags and chemical/seed batch tracking, ties into NAIT integration
 
@@ -286,4 +286,4 @@
 - [x] Usability: reorder/filter reference-data dropdown options by the farm's active country profile instead of one flat global list
 - [x] Usability: bulk entry — log the same event (drenching, weighing) against multiple animals/flocks in one submission
 - [x] Usability: "setup completeness" nudge on the dashboard for empty reference-heavy modules (e.g. "no chemicals registered yet" on Pest & Spray Log), linking straight to the add form
-- [ ] Reference data: `fertiliser-type` has no natural field to attach to yet (no fertiliser-application schema) — revisit once/if a dedicated fertiliser-application record is added
+- [x] Reference data: `fertiliser-type` has no natural field to attach to yet (no fertiliser-application schema) — revisit once/if a dedicated fertiliser-application record is added

@@ -29,6 +29,7 @@ const BOTTOM_LINKS: SidebarLink[] = [
   { label: "Settings", href: "/settings/farm" },
   { label: "Modules", href: "/settings/modules" },
   { label: "Notifications", href: "/settings/notifications" },
+  { label: "Traceability", href: "/settings/traceability" },
   { label: "Backup", href: "/settings/backup" },
   { label: "Restore", href: "/settings/restore" },
 ];
@@ -53,7 +54,17 @@ export function AppLayout() {
   }
 
   return (
-    <Layout links={[{ label: "Dashboard", href: "/" }, { label: "Calendar", href: "/calendar" }, ...BOTTOM_LINKS]} groups={groups} tenantName={farmName}>
+    <Layout
+      links={[
+        { label: "Dashboard", href: "/" },
+        { label: "Calendar", href: "/calendar" },
+        { label: "Reports", href: "/reports" },
+        { label: "Analytics", href: "/analytics" },
+        ...BOTTOM_LINKS,
+      ]}
+      groups={groups}
+      tenantName={farmName}
+    >
       <div className="mb-4 flex justify-end">
         <NotificationBell />
       </div>

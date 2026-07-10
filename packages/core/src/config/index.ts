@@ -6,3 +6,10 @@ export { COUNTRY_PROFILES, getCountryProfile, resolveCountryProfile } from "./co
 export type { CountryProfile, CountryProfileId } from "./country-profiles.js";
 export { FARM_TEMPLATES } from "./farm-templates.js";
 export type { FarmTemplate } from "./farm-templates.js";
+export {
+  TRACEABILITY_PROVIDERS,
+  COUNTRY_TRACEABILITY_MAP,
+  getTraceabilityProvider,
+  getTraceabilityProviderById,
+} from "./traceability-providers.js";
+export type { TraceabilityProvider } from "./traceability-providers.js";

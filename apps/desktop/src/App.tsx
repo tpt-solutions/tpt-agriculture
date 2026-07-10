@@ -17,6 +17,9 @@ import { ModulePage } from "./pages/ModulePage.js";
 import { WeatherPage } from "./pages/WeatherPage.js";
 import { DecisionSupportPage } from "./pages/DecisionSupportPage.js";
 import { FarmCalendarPage } from "./pages/FarmCalendarPage.js";
+import { ReportsPage } from "./pages/ReportsPage.js";
+import { AnalyticsPage } from "./pages/AnalyticsPage.js";
+import { SettingsTraceabilityPage } from "./pages/SettingsTraceabilityPage.js";
 import { PwaInstallBanner } from "./components/PwaInstallBanner.js";
 import { RecoveryPhrasePage } from "./backup/RecoveryPhrasePage.js";
 
@@ -42,12 +45,15 @@ export default function App() {
             >
               <Route index element={<DashboardPage />} />
               <Route path="calendar" element={<FarmCalendarPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="modules/weather" element={<WeatherPage />} />
               <Route path="modules/decision-support" element={<DecisionSupportPage />} />
               <Route path="modules/:moduleId" element={<ModulePage />} />
               <Route path="settings/farm" element={<SettingsFarmPage />} />
               <Route path="settings/modules" element={<SettingsModulesPage />} />
               <Route path="settings/notifications" element={<SettingsNotificationsPage />} />
+              <Route path="settings/traceability" element={<SettingsTraceabilityPage />} />
               <Route path="settings/backup" element={<SettingsBackupPage />} />
               <Route path="settings/restore" element={<SettingsRestorePage />} />
             </Route>

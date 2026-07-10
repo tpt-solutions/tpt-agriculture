@@ -9,3 +9,12 @@ export { getDb, setDb } from "./db.js";
 export { DEFAULT_OPTIONS, COUNTRY_OPTIONS, getDefaultOptions } from "./reference-data.js";
 export { STANDARD_CHEMICALS } from "./chemical-seed-data.js";
 export { seedStandardChemicals } from "./seed-chemicals.js";
+export { logChange, getAuditLog, getRecordHistory } from "./audit-service.js";
+export type { AuditEntry, AuditQueryOptions } from "./audit-service.js";
+export {
+  TRACEABILITY_PROVIDERS,
+  COUNTRY_TRACEABILITY_MAP,
+  getTraceabilityProvider,
+  getTraceabilityProviderById,
+} from "./config/traceability-providers.js";
+export type { TraceabilityProvider } from "./config/traceability-providers.js";

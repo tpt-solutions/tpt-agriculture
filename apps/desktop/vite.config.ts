@@ -5,11 +5,15 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const host = process.env.TAURI_DEV_HOST;
 
+// Only enable PWA for production builds (not Tauri dev builds)
+const isTauri = !!process.env.TAURI_ENV_PLATFORM;
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
-    VitePWA({
+    // PWA plugin is only for browser/PWA builds, not Tauri
+    !isTauri && VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icons/*.png"],
       manifest: {
@@ -40,6 +44,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
         runtimeCaching: [],
       },
+      // Exclude worker files from PWA processing - they use ES modules
+      injectRegister: null,
     }),
   ],
   clearScreen: false,

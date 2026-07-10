@@ -5,8 +5,8 @@ import { useNavigate } from "react-router";
 import { DashboardShell } from "@tpt/ui";
 import { Button } from "@tpt/ui";
 import { getDb } from "@tpt/core";
-import { farmTasks, farmTaskTemplates } from "@tpt/core/schema";
-import { eq, and, gte, lt } from "drizzle-orm";
+import { farmTasks, taskTemplates } from "@tpt/core/schema";
+import { eq } from "drizzle-orm";
 import { useFarm } from "../farm/FarmContext.js";
 import { getFarmCalendarEvents, type CalendarEvent } from "../calendar/get-farm-calendar-events.js";
 import { useCountryProfile } from "../context/FarmSettingsContext.js";
@@ -107,7 +107,7 @@ export function FarmCalendarPage() {
     queryFn: async () => {
       if (!farmId) return [];
       const db = await getDb();
-      return db.select().from(farmTaskTemplates).where(eq(farmTaskTemplates.farmId, farmId));
+      return db.select().from(taskTemplates).where(eq(taskTemplates.farmId, farmId));
     },
     enabled: !!farmId,
   });

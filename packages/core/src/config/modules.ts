@@ -206,4 +206,16 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     description: "Rules-based advisory combining soil, weather, and financial data",
     billingUnit: "included",
   },
+  tasks: {
+    name: "Tasks",
+    category: "platform",
+    description: "Farm-wide task list with due dates, assignments, and status tracking",
+    billingUnit: "included",
+  },
+  "task-templates": {
+    name: "Task Templates",
+    category: "platform",
+    description: "Reusable task templates that auto-generate farm tasks on crop-plan or livestock events",
+    billingUnit: "included",
+  },
 };

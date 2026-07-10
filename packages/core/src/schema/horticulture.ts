@@ -95,6 +95,20 @@ export const chemicals = sqliteTable("chemicals", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+export const fertiliserApplications = sqliteTable("fertiliser_applications", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  fieldId: text("field_id").references(() => fields.id, { onDelete: "set null" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  productType: text("product_type"),
+  rateKgHa: real("rate_kg_ha"),
+  totalKg: real("total_kg"),
+  method: text("method"),
+  operator: text("operator"),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 export const sprayEvents = sqliteTable("spray_events", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),

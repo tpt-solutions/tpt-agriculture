@@ -62,6 +62,8 @@ export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
     "equipment_assets",
     "compliance_checks",
     "staff_members",
+    "task_templates",
+    "farm_tasks",
   ];
 
   const snapshot: Record<string, unknown[]> = {};

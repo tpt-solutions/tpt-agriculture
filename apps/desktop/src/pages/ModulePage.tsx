@@ -1,16 +1,16 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
-import { useState, useMemo, useEffect } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "@tpt/ui";
 import { Button } from "@tpt/ui";
 import { Input } from "@tpt/ui";
-import { Select } from "@tpt/ui";
+import { Combobox } from "@tpt/ui";
 import { toast } from "sonner";
 import { useFarm } from "../farm/FarmContext.js";
 import { useCountryProfile } from "../context/FarmSettingsContext.js";
-import { MODULE_REGISTRY, getDb } from "@tpt/core";
+import { MODULE_REGISTRY, getDb, seedStandardChemicals } from "@tpt/core";
 import { farms, sprayEvents, chemicals } from "@tpt/core/schema";
 import { eq, and, gt, asc } from "drizzle-orm";
 import { useModuleList, useModuleCreate, useModuleUpdate, useModuleDelete, useModuleBulkCreate, getModuleAdapter } from "../modules/use-module-query.js";
@@ -22,6 +22,7 @@ import { PlantingCalendar } from "../components/PlantingCalendar.js";
 import { SelectWithCustom } from "../components/SelectWithCustom.js";
 import { ForeignKeySelect } from "../components/ForeignKeySelect.js";
 import { PhotoAttachments } from "../components/PhotoAttachments.js";
+import { PlantingHistoryModal } from "../components/PlantingHistoryModal.js";
 
 type SortDir = "asc" | "desc";
 
@@ -55,6 +56,8 @@ export function ModulePage() {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [photoRecordId, setPhotoRecordId] = useState<string | null>(null);
+  const [historyFieldId, setHistoryFieldId] = useState<string | null>(null);
+  const [historyFieldName, setHistoryFieldName] = useState<string>("");
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -122,6 +125,79 @@ export function ModulePage() {
     enabled: !!farmId && moduleId === "pest-spray-log",
   });
 
+  // Chemical withholding-period lookup, used to auto-calculate a spray event's
+  // withholding end date as the farmer fills in the form.
+  const { data: chemicalWithholdingMap } = useQuery({
+    queryKey: ["chemical-withholding-map", farmId],
+    queryFn: async () => {
+      if (!farmId) return {};
+      const db = await getDb();
+      const rows = await db
+        .select({ id: chemicals.id, withholdingPeriodDays: chemicals.withholdingPeriodDays })
+        .from(chemicals)
+        .where(eq(chemicals.farmId, farmId));
+      const map: Record<string, number> = {};
+      for (const r of rows) if (r.withholdingPeriodDays != null) map[r.id] = r.withholdingPeriodDays;
+      return map;
+    },
+    enabled: !!farmId && activeModuleId === "pest-spray-log-events",
+  });
+
+  useEffect(() => {
+    if (activeModuleId !== "pest-spray-log-events" || !showForm || !chemicalWithholdingMap) return;
+    const chemId = formValues.chemicalId;
+    const appDate = formValues.applicationDate;
+    if (!chemId || !appDate) return;
+    const days = chemicalWithholdingMap[chemId];
+    if (days == null) return;
+    const end = new Date(appDate);
+    end.setDate(end.getDate() + days);
+    const endStr = end.toISOString().slice(0, 10);
+    setFormValues((v) => (v.withholdingEndDate === endStr ? v : { ...v, withholdingEndDate: endStr }));
+  }, [activeModuleId, showForm, formValues.chemicalId, formValues.applicationDate, chemicalWithholdingMap]);
+
+  // Active withholding periods by field, used to warn on harvest-tracking entries.
+  const { data: withholdingByField } = useQuery({
+    queryKey: ["withholding-by-field", farmId],
+    queryFn: async () => {
+      if (!farmId) return {};
+      const db = await getDb();
+      const now = new Date();
+      const active = await db
+        .select({ fieldId: sprayEvents.fieldId, withholdingEndDate: sprayEvents.withholdingEndDate, chemicalId: sprayEvents.chemicalId })
+        .from(sprayEvents)
+        .where(and(eq(sprayEvents.farmId, farmId), gt(sprayEvents.withholdingEndDate, now)));
+      const map: Record<string, { endDate: Date; chemicalName: string }> = {};
+      for (const sw of active) {
+        if (!sw.fieldId || !sw.withholdingEndDate) continue;
+        const existing = map[sw.fieldId];
+        if (existing && existing.endDate >= sw.withholdingEndDate) continue;
+        let chemicalName = "Unknown chemical";
+        if (sw.chemicalId) {
+          const [chem] = await db.select({ name: chemicals.name }).from(chemicals).where(eq(chemicals.id, sw.chemicalId)).limit(1);
+          if (chem) chemicalName = chem.name;
+        }
+        map[sw.fieldId] = { endDate: sw.withholdingEndDate, chemicalName };
+      }
+      return map;
+    },
+    enabled: !!farmId && moduleId === "harvest-tracking",
+  });
+  const [withholdingOverrideConfirmed, setWithholdingOverrideConfirmed] = useState(false);
+  const activeFieldWithholding = moduleId === "harvest-tracking" && formValues.fieldId ? withholdingByField?.[formValues.fieldId] : undefined;
+  useEffect(() => {
+    setWithholdingOverrideConfirmed(false);
+  }, [formValues.fieldId]);
+
+  // Load standard chemical list (pest-spray-log only)
+  async function handleLoadStandardChemicals() {
+    if (!farmId) return;
+    const db = await getDb();
+    const added = await seedStandardChemicals(db, farmId);
+    queryClient.invalidateQueries({ queryKey: ["module", "pest-spray-log", "list", farmId] });
+    toast.success(added > 0 ? `Added ${added} chemicals` : "Standard list already loaded");
+  }
+
   // PDF export handler (pest-spray-log only)
   function handleExportPdf() {
     const mod = adapter;
@@ -157,11 +233,13 @@ export function ModulePage() {
       if (field.type === "date") defaults[field.key] = today;
     }
     setFormValues(defaults);
+    setWithholdingOverrideConfirmed(false);
     setShowForm(true);
   }
 
   function openEditForm(item: Record<string, unknown>) {
     setEditingId(String(item.id));
+    setWithholdingOverrideConfirmed(false);
     const values: Record<string, string> = {};
     for (const field of mod.formFields) {
       const v = item[field.key];
@@ -181,6 +259,7 @@ export function ModulePage() {
 
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (activeFieldWithholding && !withholdingOverrideConfirmed) return;
     const data: Record<string, unknown> = {};
     let parentIdField: string | undefined;
     for (const field of mod.formFields) {
@@ -303,8 +382,18 @@ export function ModulePage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const [equipmentTypeFilter, setEquipmentTypeFilter] = useState<string | null>(null);
+  const equipmentTypes = useMemo(() => {
+    if (moduleId !== "equipment") return [];
+    return Array.from(new Set(items.map((i) => (i.assetType ? String(i.assetType) : null)).filter((v): v is string => !!v))).sort();
+  }, [items, moduleId]);
+
   const filteredItems = useMemo(() => {
     let result = items;
+
+    if (moduleId === "equipment" && equipmentTypeFilter) {
+      result = result.filter((item) => item.assetType === equipmentTypeFilter);
+    }
 
     // Client-side search/filter
     if (searchQuery.trim()) {
@@ -345,7 +434,7 @@ export function ModulePage() {
     }
 
     return result;
-  }, [items, searchQuery, sortKey, sortDir, mod.columns]);
+  }, [items, searchQuery, sortKey, sortDir, mod.columns, moduleId, equipmentTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -385,6 +474,11 @@ export function ModulePage() {
           {mod.create && (
             <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
               Import CSV
+            </Button>
+          )}
+          {moduleId === "pest-spray-log" && activeModuleId === moduleId && (
+            <Button variant="secondary" onClick={handleLoadStandardChemicals}>
+              Load Standard Chemical List
             </Button>
           )}
           {moduleId === "pest-spray-log" && activeModuleId === moduleId && items.length > 0 && (
@@ -500,11 +594,12 @@ export function ModulePage() {
                         required={field.required}
                       />
                     ) : field.type === "select" ? (
-                      <Select
+                      <Combobox
                         value={formValues[field.key] ?? ""}
-                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                        onChange={(value) => setFormValues((v) => ({ ...v, [field.key]: value }))}
                         options={field.options ?? []}
                         placeholder={`Select ${field.label}`}
+                        required={field.required}
                       />
                     ) : field.type === "textarea" ? (
                       <textarea
@@ -521,11 +616,29 @@ export function ModulePage() {
                         placeholder={field.placeholder}
                       />
                     )}
+                    {field.helpText && (
+                      <p className="mt-1 text-xs text-gray-400">{field.helpText}</p>
+                    )}
                   </div>
                 ))}
                 </div>
               </div>
             ))}
+            {activeFieldWithholding && (
+              <div className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <p>
+                  ⚠ This field has an active spray withholding period for <strong>{activeFieldWithholding.chemicalName}</strong> until{" "}
+                  {activeFieldWithholding.endDate.toLocaleDateString()}.
+                </p>
+                {!withholdingOverrideConfirmed ? (
+                  <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={() => setWithholdingOverrideConfirmed(true)}>
+                    Save Anyway
+                  </Button>
+                ) : (
+                  <p className="mt-1 text-xs font-medium">Override confirmed — click {editingId ? "Save Changes" : "Create"} to proceed.</p>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 sm:col-span-2">
               <Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>
                 {editingId ? "Save Changes" : "Create"}
@@ -639,6 +752,35 @@ export function ModulePage() {
               Bulk entry mode: check the items to log against, then click "Bulk Add ({selectedIds.size})".
             </div>
           )}
+          {/* Equipment category filter chips */}
+          {moduleId === "equipment" && equipmentTypes.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setEquipmentTypeFilter(null)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  equipmentTypeFilter === null ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                All ({items.length})
+              </button>
+              {equipmentTypes.map((type) => {
+                const count = items.filter((i) => i.assetType === type).length;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEquipmentTypeFilter(equipmentTypeFilter === type ? null : type)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      equipmentTypeFilter === type ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {type} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Search / Filter */}
           <div className="mb-3">
             <Input
@@ -683,7 +825,7 @@ export function ModulePage() {
                             {sortDir === "asc" ? "\u25B2" : "\u25BC"}
                           </span>
                         ) : (
-                          <span className="text-gray-300 text-xs">\u25B2\u25BC</span>
+                          <span className="text-gray-300 text-xs">{"\u25B2\u25BC"}</span>
                         )}
                       </span>
                     </th>
@@ -702,8 +844,8 @@ export function ModulePage() {
                     </tr>
                   )}
                   {paginatedItems.map((item) => (
-                    <>
-                    <tr key={String(item.id)} className={`hover:bg-gray-50 ${selectedIds.has(String(item.id)) ? "bg-green-50" : ""}`}>
+                    <Fragment key={String(item.id)}>
+                    <tr className={`hover:bg-gray-50 ${selectedIds.has(String(item.id)) ? "bg-green-50" : ""}`}>
                       {bulkMode && (
                         <td className="w-10 px-2 py-2.5">
                           <input
@@ -730,6 +872,11 @@ export function ModulePage() {
                       {(mod.update || mod.delete) && (
                         <td className="px-4 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {moduleId === "field-management" && (
+                              <Button variant="ghost" size="sm" onClick={() => { setHistoryFieldId(String(item.id)); setHistoryFieldName(String(item.name ?? "")); }}>
+                                History
+                              </Button>
+                            )}
                             {farmId && (
                               <Button variant="ghost" size="sm" onClick={() => setPhotoRecordId(photoRecordId === String(item.id) ? null : String(item.id))}>
                                 {photoRecordId === String(item.id) ? "Hide" : "Photos"}
@@ -768,7 +915,7 @@ export function ModulePage() {
                       </td>
                     </tr>
                   ) : null}
-                    </>
+                    </Fragment>
                   ))}
                 {filteredItems.length === 0 && (
                   <tr>
@@ -848,6 +995,14 @@ export function ModulePage() {
         formFields={mod.formFields}
         label={mod.label}
       />
+      {historyFieldId && farmId && (
+        <PlantingHistoryModal
+          farmId={farmId}
+          fieldId={historyFieldId}
+          fieldName={historyFieldName}
+          onClose={() => { setHistoryFieldId(null); setHistoryFieldName(""); }}
+        />
+      )}
     </DashboardShell>
   );
 }

@@ -35,7 +35,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     description: "Beef mobs, weight gain, drafting, pasture management",
     moduleIds: [
       "cattle-beef", "pasture", "pest-spray-log",
-      "financials", "input-prices", "output-prices", "equipment",
+      "financials", "input-prices", "output-prices", "equipment", "staff",
     ],
   },
   {
@@ -45,7 +45,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     description: "Fields, crop planning, harvest tracking, vegetables, soil management",
     moduleIds: [
       "field-management", "crop-planning", "harvest-tracking", "pest-spray-log",
-      "vegetables", "financials", "equipment", "soil-water",
+      "vegetables", "financials", "equipment", "soil-water", "staff",
     ],
   },
   {
@@ -55,7 +55,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     description: "Multiple livestock types, pasture, financials — all livestock modules enabled",
     moduleIds: [
       "cattle-dairy", "cattle-beef", "sheep", "goats", "deer", "pigs", "poultry", "pasture",
-      "pest-spray-log", "financials", "input-prices", "output-prices", "equipment",
+      "pest-spray-log", "financials", "input-prices", "output-prices", "equipment", "staff",
     ],
   },
   {
@@ -66,7 +66,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     moduleIds: [
       "field-management", "crop-planning", "harvest-tracking", "pest-spray-log",
       "viticulture", "orchard", "vegetables", "microgreens", "protected-cropping",
-      "aquaponics", "financials", "equipment",
+      "aquaponics", "financials", "equipment", "staff",
     ],
   },
   {
@@ -76,7 +76,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     description: "Orchard blocks, vineyard blocks, spray log, harvest bins, vintage records",
     moduleIds: [
       "orchard", "viticulture", "pest-spray-log",
-      "financials", "equipment",
+      "financials", "equipment", "staff",
     ],
   },
   {
@@ -85,7 +85,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🐝",
     description: "Hive inspections, honey harvests, queen records, compliance",
     moduleIds: [
-      "bees", "pasture", "financials", "compliance",
+      "bees", "pasture", "financials", "compliance", "staff",
     ],
   },
   {
@@ -94,7 +94,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🐖",
     description: "Sow records, litters, feed conversion, financials",
     moduleIds: [
-      "pigs", "financials", "equipment",
+      "pigs", "financials", "equipment", "staff",
     ],
   },
   {
@@ -103,7 +103,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🐔",
     description: "Flock batches, egg production, mortality, compliance",
     moduleIds: [
-      "poultry", "financials", "equipment", "compliance",
+      "poultry", "financials", "equipment", "compliance", "staff",
     ],
   },
   {
@@ -112,7 +112,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🌲",
     description: "Forest blocks, plantings, thinning, harvest volumes",
     moduleIds: [
-      "forestry", "financials", "equipment",
+      "forestry", "financials", "equipment", "staff",
     ],
   },
   {
@@ -121,7 +121,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🍄",
     description: "Growing rooms, crops, flushes, harvests",
     moduleIds: [
-      "mushroom", "financials",
+      "mushroom", "financials", "staff",
     ],
   },
   {
@@ -130,7 +130,7 @@ export const FARM_TEMPLATES: FarmTemplate[] = [
     icon: "🌱",
     description: "Propagation beds, seedling trays, transplants, sales",
     moduleIds: [
-      "nursery", "financials", "equipment",
+      "nursery", "financials", "equipment", "staff",
     ],
   },
   {

@@ -2,7 +2,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { getDb, FARM_TEMPLATES } from "@tpt/core";
+import { getDb, FARM_TEMPLATES, seedStandardChemicals } from "@tpt/core";
 import type { FarmTemplate } from "@tpt/core";
 import { farms } from "@tpt/core/schema";
 import { generateBackupKey, storeBackupKey } from "../backup/keygen.js";
@@ -45,13 +45,17 @@ export function FarmSetupPage() {
       if (selectedTemplate && selectedTemplate.id !== "custom") {
         settings.templateId = selectedTemplate.id;
       }
+      const farmId = crypto.randomUUID();
       await db.insert(farms).values({
-        id: crypto.randomUUID(),
+        id: farmId,
         name: farmName,
         settingsJson: settings,
         createdAt: now,
         updatedAt: now,
       });
+      if (enabledModuleIds.includes("pest-spray-log")) {
+        await seedStandardChemicals(db, farmId);
+      }
       await refresh();
 
       const key = await generateBackupKey();

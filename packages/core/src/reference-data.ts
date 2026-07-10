@@ -216,6 +216,8 @@ export const DEFAULT_OPTIONS: Record<string, string[]> = {
 
   "feed-type": ["Silage", "Hay", "Baleage", "Grain", "Pellets", "Molasses", "Pasture", "Concentrate", "Meal", "Other"],
 
+  "fertiliser-method": ["Broadcast", "Fertigation", "Side-dress", "Foliar", "Banded", "Other"],
+
   "treatment-type": [
     "Drench",
     "Vaccination",
@@ -243,6 +245,58 @@ export const DEFAULT_OPTIONS: Record<string, string[]> = {
   "unit-of-measure": ["kg", "L", "ha", "head", "bale", "tonne", "m³", "g", "each"],
 
   "movement-type": ["IN", "OUT", "ADJUST"],
+
+  "farm-task": ["Sow", "Transplant", "Fertilise", "Irrigate", "Spray", "Weed", "Prune", "Mow", "Harvest", "Soil Test", "Scout/Monitor", "Other"],
+
+  "irrigation-zone": ["Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5"],
+  "buyer": [],
+  "location": [],
+  "house": ["House 1", "House 2", "House 3", "House 4"],
+  "storage-location": ["Shed", "Barn", "Chemical Store", "Cool Store", "Freezer", "Silo", "Grain Store", "Workshop"],
+  "equipment-make": ["John Deere", "Massey Ferguson", "Case IH", "New Holland", "Kubota", "Claas", "Fendt", "Deutz-Fahr", "Valtra", "JCB"],
+  "destination": ["Local Processor", "Export Market", "Saleyards / Auction", "Direct to Consumer", "On-farm Sale", "Other Farm"],
+  "aquaponics-bed": ["Bed 1", "Bed 2", "Bed 3", "Bed 4"],
+  "nursery-supplier": [],
+
+  "viticulture-rootstock": ["101-14", "3309C", "SO4", "Riparia Gloire", "5BB Kober", "1103 Paulsen", "Schwarzmann"],
+  "trellis-system": ["VSP (Vertical Shoot Positioning)", "Sprawl", "Geneva Double Curtain", "Scott Henry", "Lyre", "Pergola"],
+  "orchard-rootstock": ["M9", "M26", "MM106", "MM111", "Nemaguard", "Colt", "Quince C", "Seedling"],
+  "soil-mix": ["Potting Mix", "Coco Coir", "Compost Blend", "Perlite/Vermiculite Mix", "Native Soil", "Raised Bed Mix"],
+  "substrate": ["Coco Coir", "Vermiculite", "Perlite", "Hemp Mat", "Soil", "Paper Towel", "Rockwool"],
+  "structure-type": ["Glasshouse", "Polytunnel", "Shade House", "Hoop House", "High Tunnel", "Igloo Tunnel"],
+  "roof-material": ["Glass", "Polycarbonate", "Polyethylene Film", "Shade Cloth", "Fibreglass"],
+  "heating-system": ["None", "Gas Heater", "Electric Heater", "Hot Water Boiler", "Geothermal", "Wood Burner"],
+  "aquaponics-system-type": ["Media Bed", "NFT (Nutrient Film Technique)", "DWC (Deep Water Culture)", "Hybrid"],
+  "mushroom-room-type": ["Spawn Run", "Incubation", "Fruiting", "Cold Storage", "Pasteurisation"],
+  "poultry-purpose": ["Eggs", "Meat", "Breeding", "Dual Purpose"],
+  "queen-color": ["White", "Yellow", "Red", "Green", "Blue"],
+  "bee-origin": ["Package", "Nucleus (Nuc)", "Swarm Capture", "Split", "Purchased Queen"],
+  "season": ["Spring", "Summer", "Autumn", "Winter"],
+  "wool-product": ["Fleece", "Crutchings", "Locks", "Skirtings", "Dags"],
+  "wool-grade": ["Fine", "Medium", "Strong", "Crossbred", "Fine Crossbred", "Oddments"],
+  "fibre-type": ["Mohair", "Cashmere"],
+  "fibre-grade": ["Kid", "Yearling", "Adult", "Fine", "Medium", "Coarse"],
+  "velvet-grade": ["Spiker", "A Grade", "B Grade", "C Grade", "Reject"],
+  "venison-grade": ["Premium", "Standard", "Manufacturing", "Reject"],
+  "egg-grade": ["Jumbo", "Extra Large", "Large", "Medium", "Small", "Cracked/Reject"],
+  "mortality-cause": ["Disease", "Predation", "Injury", "Weather", "Old Age", "Unknown", "Other"],
+  "hive-temperament": ["Calm", "Moderate", "Aggressive", "Defensive"],
+  "brood-pattern": ["Solid", "Spotty", "None"],
+  "food-stores-level": ["Low", "Adequate", "Abundant"],
+  "bee-disease-signs": ["None", "Varroa", "American Foulbrood", "European Foulbrood", "Nosema", "Chalkbrood", "Wax Moth", "Other"],
+  "bee-inspection-action": ["None", "Treated", "Monitored", "Requeened", "Combined", "Culled", "Fed"],
+  "honey-type": ["Multifloral/Wildflower", "Clover", "Manuka", "Orange Blossom", "Acacia", "Lavender", "Other"],
+  "honey-grade": ["Table Grade", "Premium Grade", "Bakers Grade", "Comb Honey"],
+  "stock-type": ["Sheep", "Cattle", "Goats", "Deer", "Mixed"],
+  "pasture-measurement-method": ["Rising Plate Meter", "Visual Estimate", "Pasture Stick", "Satellite/NDVI", "C-Dax"],
+  "produce-grade": ["Grade A / Premium", "Grade B / Standard", "Grade C / Processing", "Reject"],
+  "lateral-growth": ["Light", "Moderate", "Vigorous"],
+  "orchard-training-system": ["Central Leader", "Open Vase", "Espalier", "Trellis (2D/V)", "Free-standing", "Tall Spindle"],
+  "seed-source": ["Own Saved Seed", "Purchased - Certified", "Purchased - Commercial", "Nursery Seedling", "Seed Bank"],
+  "fish-species": ["Tilapia", "Trout", "Barramundi", "Murray Cod", "Silver Perch", "Yabby", "Catfish", "Koi"],
+  "fish-source": ["Hatchery", "Own Breeding", "Purchased Fingerlings"],
+  "spawn-source": ["Purchased Spawn", "Own Culture", "Grain Spawn", "Liquid Culture", "Tissue Culture"],
+  "weather-conditions": ["Calm", "Light Wind", "Moderate Wind", "Overcast", "Sunny", "Rain Likely", "Humid", "Frosty"],
 };
 
 /**

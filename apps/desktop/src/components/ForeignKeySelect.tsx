@@ -1,5 +1,5 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
-import { Select } from "@tpt/ui";
+import { Combobox } from "@tpt/ui";
 import { useModuleList } from "../modules/use-module-query.js";
 
 /** Dropdown populated from another module's live records (e.g. picking which
@@ -28,9 +28,9 @@ export function ForeignKeySelect({
   }));
 
   return (
-    <Select
+    <Combobox
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
       options={options}
       placeholder={placeholder}
       required={required}

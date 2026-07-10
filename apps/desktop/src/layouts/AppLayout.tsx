@@ -3,60 +3,57 @@ import { Outlet } from "react-router";
 import { useFarm } from "../farm/FarmContext.js";
 import { useSettings } from "../context/FarmSettingsContext.js";
 import { Layout } from "@tpt/ui";
-import type { SidebarLink } from "@tpt/ui";
+import type { SidebarLink, SidebarGroup } from "@tpt/ui";
+import { MODULE_REGISTRY } from "@tpt/core";
+import type { ModuleCategory } from "@tpt/core";
 import { NotificationBell } from "../notifications/NotificationBell.js";
 
-const MODULE_NAV_LINKS: (SidebarLink & { moduleId: string })[] = [
-  { moduleId: "field-management", label: "Field Management", href: "/modules/field-management" },
-  { moduleId: "crop-planning", label: "Crop Planning", href: "/modules/crop-planning" },
-  { moduleId: "harvest-tracking", label: "Harvest Tracking", href: "/modules/harvest-tracking" },
-  { moduleId: "pest-spray-log", label: "Pest & Spray Log", href: "/modules/pest-spray-log" },
-  { moduleId: "viticulture", label: "Viticulture", href: "/modules/viticulture" },
-  { moduleId: "orchard", label: "Orchard", href: "/modules/orchard" },
-  { moduleId: "vegetables", label: "Vegetables", href: "/modules/vegetables" },
-  { moduleId: "microgreens", label: "Microgreens", href: "/modules/microgreens" },
-  { moduleId: "protected-cropping", label: "Protected Cropping", href: "/modules/protected-cropping" },
-  { moduleId: "aquaponics", label: "Aquaponics", href: "/modules/aquaponics" },
-  { moduleId: "cattle-dairy", label: "Dairy Cattle", href: "/modules/cattle-dairy" },
-  { moduleId: "cattle-beef", label: "Beef Cattle", href: "/modules/cattle-beef" },
-  { moduleId: "sheep", label: "Sheep", href: "/modules/sheep" },
-  { moduleId: "goats", label: "Goats", href: "/modules/goats" },
-  { moduleId: "deer", label: "Deer", href: "/modules/deer" },
-  { moduleId: "pigs", label: "Pigs", href: "/modules/pigs" },
-  { moduleId: "poultry", label: "Poultry", href: "/modules/poultry" },
-  { moduleId: "bees", label: "Beekeeping", href: "/modules/bees" },
-  { moduleId: "pasture", label: "Pasture", href: "/modules/pasture" },
-];
+// Build module nav links directly from MODULE_REGISTRY + enabled modules.
+const MODULE_HREF: Record<string, string> = {};
+for (const id of Object.keys(MODULE_REGISTRY)) {
+  MODULE_HREF[id] = `/modules/${id}`;
+}
 
-// Platform tools are always visible — not gated by the horticulture/livestock module picker.
-const PLATFORM_NAV_LINKS: SidebarLink[] = [
-  { label: "Financials", href: "/modules/financials" },
-  { label: "Input Prices", href: "/modules/input-prices" },
-  { label: "Output Prices", href: "/modules/output-prices" },
+const CATEGORY_ORDER: ModuleCategory[] = ["horticulture", "livestock", "platform"];
+const CATEGORY_LABELS: Record<ModuleCategory, string> = {
+  horticulture: "Horticulture",
+  livestock: "Livestock",
+  platform: "Platform",
+};
+
+// Platform tools that are always visible (not gated by the module picker).
+const ALWAYS_VISIBLE = new Set(["financials", "input-prices", "output-prices", "decision-support"]);
+
+// Bottom links (settings / backup) are always shown.
+const BOTTOM_LINKS: SidebarLink[] = [
+  { label: "Settings", href: "/settings/farm" },
+  { label: "Modules", href: "/settings/modules" },
+  { label: "Notifications", href: "/settings/notifications" },
+  { label: "Backup", href: "/settings/backup" },
+  { label: "Restore", href: "/settings/restore" },
 ];
 
 export function AppLayout() {
   const { farmName } = useFarm();
   const settings = useSettings();
-  const enabledModuleIds = settings?.settings.enabledModuleIds as string[] | undefined;
+  const enabledModuleIds = (settings?.settings.enabledModuleIds as string[] | undefined) ?? [];
 
-  const visibleModuleLinks = enabledModuleIds
-    ? MODULE_NAV_LINKS.filter((link) => enabledModuleIds.includes(link.moduleId))
-    : MODULE_NAV_LINKS;
-
-  const links: SidebarLink[] = [
-    { label: "Dashboard", href: "/" },
-    ...visibleModuleLinks,
-    ...PLATFORM_NAV_LINKS,
-    { label: "Settings", href: "/settings/farm" },
-    { label: "Modules", href: "/settings/modules" },
-    { label: "Notifications", href: "/settings/notifications" },
-    { label: "Backup", href: "/settings/backup" },
-    { label: "Restore", href: "/settings/restore" },
-  ];
+  // Derive sidebar groups from MODULE_REGISTRY, filtered by enabled modules.
+  const groups: SidebarGroup[] = [];
+  for (const category of CATEGORY_ORDER) {
+    const links: SidebarLink[] = [];
+    for (const [id, meta] of Object.entries(MODULE_REGISTRY)) {
+      if (meta.category !== category) continue;
+      if (!ALWAYS_VISIBLE.has(id) && enabledModuleIds.length > 0 && !enabledModuleIds.includes(id)) continue;
+      links.push({ label: meta.name, href: MODULE_HREF[id] });
+    }
+    if (links.length > 0) {
+      groups.push({ label: CATEGORY_LABELS[category], links });
+    }
+  }
 
   return (
-    <Layout links={links} tenantName={farmName}>
+    <Layout links={[{ label: "Dashboard", href: "/" }, { label: "Calendar", href: "/calendar" }, ...BOTTOM_LINKS]} groups={groups} tenantName={farmName}>
       <div className="mb-4 flex justify-end">
         <NotificationBell />
       </div>

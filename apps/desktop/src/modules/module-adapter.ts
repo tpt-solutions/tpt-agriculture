@@ -26,6 +26,8 @@ export interface FormFieldDef {
   /** Optional section heading — fields sharing the same section string are grouped
    *  under a heading in the form. Fields without a section render in the default group. */
   section?: string;
+  /** Optional small helper line rendered under the field (e.g. "Auto-calculated — override if needed"). */
+  helpText?: string;
 }
 
 export interface ModuleAdapter {
@@ -34,6 +36,9 @@ export interface ModuleAdapter {
   primaryTable: string;
   columns: ColumnDef[];
   formFields: FormFieldDef[];
+  /** Which columns contain dates that should appear on the farm calendar.
+   *  Each entry maps a date column to a display label and navigation path. */
+  dateFields?: { column: string; label: string; path: string }[];
   list(farmId: string): Promise<Record<string, unknown>[]>;
   count?(farmId: string): Promise<number>;
   get?(farmId: string, id: string): Promise<Record<string, unknown> | null>;

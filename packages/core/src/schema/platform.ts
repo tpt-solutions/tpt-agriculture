@@ -103,3 +103,33 @@ export const staffMembers = sqliteTable("staff_members", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+// ─── Task Templates & Farm Tasks ──────────────────────────────────────────────
+
+export const taskTemplates = sqliteTable("task_templates", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  taskType: text("task_type").notNull(),
+  defaultDueDaysOffset: integer("default_due_days_offset"), // days after trigger event
+  defaultAssignedRole: text("default_assigned_role"),
+  category: text("category"), // crop-plan, livestock, equipment, general
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const farmTasks = sqliteTable("farm_tasks", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  templateId: text("template_id").references(() => taskTemplates.id, { onDelete: "set null" }),
+  taskType: text("task_type").notNull(),
+  title: text("title"),
+  dueDate: integer("due_date", { mode: "timestamp" }),
+  completedDate: integer("completed_date", { mode: "timestamp" }),
+  assignedTo: text("assigned_to"),
+  status: text("status").notNull().default("PENDING"), // PENDING, IN_PROGRESS, DONE, OVERDUE
+  sourceModule: text("source_module"), // which module triggered this task
+  sourceId: text("source_id"), // ID of the triggering record
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});

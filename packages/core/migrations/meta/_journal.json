@@ -50,6 +50,20 @@
       "when": 1782993172280,
       "tag": "0006_sad_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783637051007,
+      "tag": "0007_bored_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1783639417792,
+      "tag": "0008_jittery_mathemanic",
+      "breakpoints": true
     }
   ]
 }

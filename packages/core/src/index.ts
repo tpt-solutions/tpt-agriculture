@@ -7,3 +7,5 @@ export { COUNTRY_PROFILES, getCountryProfile, resolveCountryProfile, FARM_TEMPLA
 export type { CountryProfile, CountryProfileId, FarmTemplate } from "./config/index.js";
 export { getDb, setDb } from "./db.js";
 export { DEFAULT_OPTIONS, COUNTRY_OPTIONS, getDefaultOptions } from "./reference-data.js";
+export { STANDARD_CHEMICALS } from "./chemical-seed-data.js";
+export { seedStandardChemicals } from "./seed-chemicals.js";

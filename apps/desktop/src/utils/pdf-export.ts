@@ -1,6 +1,6 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 /**
- * Minimal client-side PDF generator for chemical register reports.
+ * Minimal client-side PDF generator for tabular reports.
  * Uses raw PDF primitives — no external dependencies required.
  */
 
@@ -12,8 +12,11 @@ interface PdfRow {
   cells: string[];
 }
 
-export function generateChemicalRegisterPdf(
-  farmName: string,
+/** Generic multi-page table PDF — used by the chemical register export and the
+ * Reports page's CSV/PDF exports (see Phase 17). */
+export function generateTablePdf(
+  title: string,
+  subtitle: string,
   columns: string[],
   rows: PdfRow[]
 ): Uint8Array {
@@ -58,12 +61,12 @@ export function generateChemicalRegisterPdf(
     pageLines.push("BT");
     pageLines.push(`/F1 ${headerFontSize} Tf`);
     pageLines.push(`1 0 0 1 ${margin} ${y} Tm`);
-    pageLines.push(`(${escapePdf(`Chemical Register — ${farmName}`)}) Tj`);
+    pageLines.push(`(${escapePdf(title)}) Tj`);
     y -= lineHeight * 1.5;
 
     pageLines.push(`/F2 ${subFontSize} Tf`);
     pageLines.push(`1 0 0 1 ${margin} ${y} Tm`);
-    pageLines.push(`(${escapePdf(`Generated: ${new Date().toLocaleDateString()}`)}) Tj`);
+    pageLines.push(`(${escapePdf(subtitle)}) Tj`);
     y -= lineHeight * 2;
 
     // Table header
@@ -257,6 +260,19 @@ export function generateChemicalRegisterPdf(
 
   const pdfString = pdf.join("\n");
   return new TextEncoder().encode(pdfString);
+}
+
+export function generateChemicalRegisterPdf(
+  farmName: string,
+  columns: string[],
+  rows: PdfRow[]
+): Uint8Array {
+  return generateTablePdf(
+    `Chemical Register — ${farmName}`,
+    `Generated: ${new Date().toLocaleDateString()}`,
+    columns,
+    rows
+  );
 }
 
 export function downloadPdf(data: Uint8Array, filename: string) {

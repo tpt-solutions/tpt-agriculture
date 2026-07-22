@@ -50,6 +50,27 @@
       "when": 1782993172280,
       "tag": "0006_sad_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783019337118,
+      "tag": "0007_yellow_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1783020034389,
+      "tag": "0008_narrow_firestar",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783162479010,
+      "tag": "0009_sticky_the_call",
+      "breakpoints": true
     }
   ]
 }

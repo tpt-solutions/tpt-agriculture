@@ -103,3 +103,43 @@ export const staffMembers = sqliteTable("staff_members", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+// ─── Attachments ─────────────────────────────────────────────────────────────
+// Generic photo/media attachment, reusable across every module's records rather
+// than adding a bespoke table per module. `recordTable` + `recordId` point at the
+// owning row (e.g. "sheep_flocks" / a flock's id). Stored as a base64 blob in the
+// same SQLite database used for everything else, since the DB adapter is the only
+// storage abstraction shared between the Tauri (plugin-sql) and PWA (OPFS)
+// backends — a filesystem path would only work on desktop.
+
+export const attachments = sqliteTable("attachments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  recordTable: text("record_table").notNull(),
+  recordId: text("record_id").notNull(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  dataBase64: text("data_base64").notNull(),
+  caption: text("caption"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+// Generic change-history log, written from a single choke point (the module
+// CRUD mutation hooks in `use-module-query.ts`) rather than per-adapter, so it
+// covers every module's record automatically. `changes` is a JSON string: an
+// array of `{ field, before, after }` diffs for UPDATE, or a full row snapshot
+// for CREATE/DELETE. No `actorId` yet — the app has no user/session concept
+// (auth is not implemented despite CLAUDE.md's aspirational description), so
+// this only captures *what* changed and *when*, not *who* changed it.
+
+export const auditLog = sqliteTable("audit_log", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  tableName: text("table_name").notNull(),
+  recordId: text("record_id").notNull(),
+  action: text("action").notNull(), // "CREATE" | "UPDATE" | "DELETE"
+  changes: text("changes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});

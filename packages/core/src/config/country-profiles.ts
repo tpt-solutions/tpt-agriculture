@@ -17,6 +17,8 @@ export interface CountryProfile {
   };
   regulatory: {
     chemicalRegNumber: string;
+    /** Key into `TRACEABILITY_SCHEMES` — which livestock movement scheme applies here. */
+    traceabilityScheme: string;
   };
   weatherProviders: readonly string[];
 }
@@ -36,6 +38,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "ACVM Number",
+      traceabilityScheme: "nait",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -53,6 +56,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "APVMA Number",
+      traceabilityScheme: "nlis",
     },
     weatherProviders: ["open-meteo", "bom", "custom"] as const,
   },
@@ -70,6 +74,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "EPA Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "noaa", "custom"] as const,
   },
@@ -87,6 +92,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "HSE Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "met-office", "custom"] as const,
   },
@@ -104,6 +110,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "SA EPA Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -121,6 +128,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "PMRA Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -138,6 +146,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "FAO/WHO Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -155,6 +164,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "MAPA Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -172,6 +182,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "EPA Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },
@@ -189,6 +200,7 @@ export const COUNTRY_PROFILES: Record<string, CountryProfile> = {
     },
     regulatory: {
       chemicalRegNumber: "BfR Reg Number",
+      traceabilityScheme: "generic",
     },
     weatherProviders: ["open-meteo", "custom"] as const,
   },

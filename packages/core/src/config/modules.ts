@@ -188,4 +188,10 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     description: "Rules-based advisory combining soil, weather, and financial data",
     billingUnit: "included",
   },
+  "livestock-traceability": {
+    name: "Livestock Traceability",
+    category: "platform",
+    description: "Onto/off-property movement register (NAIT, NLIS, and similar schemes per country profile)",
+    billingUnit: "included",
+  },
 };

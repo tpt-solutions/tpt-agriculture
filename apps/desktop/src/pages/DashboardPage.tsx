@@ -52,8 +52,10 @@ const PLATFORM_CARDS: ModuleCard[] = [
   { id: "equipment", name: "Equipment", description: "Asset register, maintenance log, WoF/CoF reminders", category: "platform", path: "/modules/equipment" },
   { id: "compliance", name: "Compliance", description: "Regulatory checklist per country profile", category: "platform", path: "/modules/compliance" },
   { id: "staff", name: "Staff", description: "Staff roster, timesheets, contractor records", category: "platform", path: "/modules/staff" },
+  { id: "livestock-traceability", name: "Livestock Traceability", description: "NAIT/NLIS-style onto/off-property movement register", category: "platform", path: "/modules/livestock-traceability" },
   { id: "weather", name: "Weather & Spray Windows", description: "5-day hourly spray-window calculator", category: "platform", path: "/modules/weather" },
   { id: "decision-support", name: "Decision Support", description: "Rules-based farm advisory from your data", category: "platform", path: "/modules/decision-support" },
+  { id: "reports", name: "Reports", description: "CSV/PDF financial summary and per-module data export for accountant/bank use", category: "platform", path: "/modules/reports" },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {

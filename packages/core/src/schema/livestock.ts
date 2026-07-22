@@ -347,3 +347,25 @@ export const pastureCoverRecords = sqliteTable("pasture_cover_records", {
   growthRate: real("growth_rate"),
   notes: text("notes"),
 });
+
+// ─── Livestock Traceability ──────────────────────────────────────────────────
+// Onto/off-property movement register (NAIT for NZ, NLIS for AU, etc.). Farm-scoped
+// directly rather than per-species, since a single movement event (e.g. a truck of
+// stock leaving the farm) is recorded once regardless of which module the animals
+// belong to.
+
+export const livestockMovements = sqliteTable("livestock_movements", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  species: text("species").notNull(),
+  direction: text("direction").notNull(),
+  headCount: integer("head_count").notNull(),
+  tagNumbers: text("tag_numbers"),
+  scheme: text("scheme").notNull(),
+  counterpartyName: text("counterparty_name"),
+  counterpartyPropertyId: text("counterparty_property_id"),
+  reference: text("reference"),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});

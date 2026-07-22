@@ -33,6 +33,8 @@ const PLATFORM_NAV_LINKS: SidebarLink[] = [
   { label: "Financials", href: "/modules/financials" },
   { label: "Input Prices", href: "/modules/input-prices" },
   { label: "Output Prices", href: "/modules/output-prices" },
+  { label: "Livestock Traceability", href: "/modules/livestock-traceability" },
+  { label: "Reports", href: "/modules/reports" },
 ];
 
 export function AppLayout() {

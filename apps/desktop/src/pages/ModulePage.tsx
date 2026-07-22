@@ -9,7 +9,7 @@ import { Select } from "@tpt/ui";
 import { toast } from "sonner";
 import { useFarm } from "../farm/FarmContext.js";
 import { useCountryProfile } from "../context/FarmSettingsContext.js";
-import { MODULE_REGISTRY, getDb } from "@tpt/core";
+import { MODULE_REGISTRY, getDb, getTraceabilityScheme } from "@tpt/core";
 import { farms, sprayEvents, chemicals } from "@tpt/core/schema";
 import { eq, and, gt, asc } from "drizzle-orm";
 import { useModuleList, useModuleCreate, useModuleUpdate, useModuleDelete, getModuleAdapter } from "../modules/use-module-query.js";
@@ -18,6 +18,9 @@ import { generateChemicalRegisterPdf, downloadPdf } from "../utils/pdf-export.js
 import { PlantingCalendar } from "../components/PlantingCalendar.js";
 import { SelectWithCustom } from "../components/SelectWithCustom.js";
 import { ForeignKeySelect } from "../components/ForeignKeySelect.js";
+import { AttachmentsPanel } from "../components/AttachmentsPanel.js";
+import { countAttachments } from "../attachments/attachments-service.js";
+import { AuditLogPanel } from "../components/AuditLogPanel.js";
 
 type SortDir = "asc" | "desc";
 
@@ -30,6 +33,7 @@ export function ModulePage() {
   const countryProfile = useCountryProfile();
   const locale = countryProfile?.locale;
   const chemicalRegLabel = countryProfile?.regulatory?.chemicalRegNumber;
+  const traceabilityTagLabel = getTraceabilityScheme(countryProfile?.regulatory?.traceabilityScheme).tagLabel;
 
   // Modules with sub-tables (e.g. Sheep → Flocks/Lambing/Drenching/Shearing) show a
   // tab bar; the active tab picks which adapter/table is displayed on this page.
@@ -38,12 +42,14 @@ export function ModulePage() {
   const activeModuleId = tabs.some((t) => t.id === activeTabId) ? activeTabId : (moduleId ?? "");
 
   // Use locale-aware adapter
-  const adapter = activeModuleId ? getModuleAdapter(activeModuleId, locale, chemicalRegLabel) : undefined;
+  const adapter = activeModuleId ? getModuleAdapter(activeModuleId, locale, chemicalRegLabel, traceabilityTagLabel) : undefined;
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [attachmentsForId, setAttachmentsForId] = useState<string | null>(null);
+  const [historyForId, setHistoryForId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -54,6 +60,8 @@ export function ModulePage() {
     setShowForm(false);
     setEditingId(null);
     setViewMode("table");
+    setAttachmentsForId(null);
+    setHistoryForId(null);
   }, [moduleId]);
 
   const { data: items = [], isLoading } = useModuleList(activeModuleId, farmId ?? undefined);
@@ -306,6 +314,14 @@ export function ModulePage() {
 
     return result;
   }, [items, searchQuery, sortKey, sortDir, mod.columns]);
+
+  const itemIds = useMemo(() => filteredItems.map((item) => String(item.id)), [filteredItems]);
+
+  const { data: attachmentCounts = {} } = useQuery({
+    queryKey: ["attachment-counts", mod.primaryTable, farmId, itemIds],
+    queryFn: () => countAttachments(farmId!, mod.primaryTable, itemIds),
+    enabled: !!farmId && itemIds.length > 0,
+  });
 
   return (
     <DashboardShell
@@ -568,6 +584,12 @@ export function ModulePage() {
                     {(mod.update || mod.delete) && (
                       <td className="px-4 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setAttachmentsForId(String(item.id))}>
+                            📎{attachmentCounts[String(item.id)] ? ` ${attachmentCounts[String(item.id)]}` : ""}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setHistoryForId(String(item.id))}>
+                            🕘
+                          </Button>
                           {mod.update && (
                             <Button variant="ghost" size="sm" onClick={() => openEditForm(item)}>
                               Edit
@@ -606,6 +628,24 @@ export function ModulePage() {
             </table>
           </div>
         </>
+      )}
+
+      {attachmentsForId && farmId && (
+        <AttachmentsPanel
+          farmId={farmId}
+          recordTable={mod.primaryTable}
+          recordId={attachmentsForId}
+          onClose={() => setAttachmentsForId(null)}
+        />
+      )}
+
+      {historyForId && farmId && (
+        <AuditLogPanel
+          farmId={farmId}
+          recordTable={mod.primaryTable}
+          recordId={historyForId}
+          onClose={() => setHistoryForId(null)}
+        />
       )}
     </DashboardShell>
   );

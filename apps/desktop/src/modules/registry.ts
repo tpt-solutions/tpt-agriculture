@@ -1,6 +1,6 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { eq, and, asc, desc, inArray, getTableName } from "drizzle-orm";
-import { getDb, MODULE_REGISTRY } from "@tpt/core";
+import { getDb, MODULE_REGISTRY, resolveCountryProfile, TRACEABILITY_SCHEMES } from "@tpt/core";
 import * as schema from "@tpt/core/schema";
 import type { ModuleAdapter, ColumnDef, FormFieldDef } from "./module-adapter.js";
 
@@ -10,6 +10,15 @@ const ENTERPRISE_OPTIONS = Object.entries(MODULE_REGISTRY)
   .map(([id, meta]) => ({ value: id, label: meta.name }));
 const ENTERPRISE_LABELS: Record<string, string> = Object.fromEntries(
   ENTERPRISE_OPTIONS.map((o) => [o.value, o.label])
+);
+
+/** Species eligible for a traceability movement record — livestock modules that
+ * carry individually-identifiable animals/mobs. Excludes bees and pasture, which
+ * are also "livestock" category but aren't subject to NAIT/NLIS-style schemes. */
+const TRACEABLE_SPECIES_IDS = ["cattle-dairy", "cattle-beef", "sheep", "goats", "deer", "pigs", "poultry"];
+const TRACEABLE_SPECIES_OPTIONS = TRACEABLE_SPECIES_IDS.map((id) => ({ value: id, label: MODULE_REGISTRY[id]!.name }));
+const TRACEABLE_SPECIES_LABELS: Record<string, string> = Object.fromEntries(
+  TRACEABLE_SPECIES_OPTIONS.map((o) => [o.value, o.label])
 );
 
 /**
@@ -994,6 +1003,53 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
       return row as Record<string, unknown>;
     },
     delete: async (farmId, id) => { await getDb().delete(schema.staffMembers).where(and(eq(schema.staffMembers.id, id), eq(schema.staffMembers.farmId, farmId))); },
+  },
+
+  // ─── Platform: Livestock Traceability ───────────────────────────────────────
+
+  "livestock-traceability": {
+    moduleId: "livestock-traceability",
+    label: "Movements",
+    primaryTable: "livestock_movements",
+    columns: [
+      { key: "date", label: "Date", type: "date" },
+      { key: "species", label: "Species", format: (v) => TRACEABLE_SPECIES_LABELS[String(v)] ?? (v ? String(v) : "—") },
+      { key: "direction", label: "Direction" },
+      { key: "headCount", label: "Head", type: "number" },
+      { key: "tagNumbers", label: "Tag Numbers" },
+      { key: "scheme", label: "Scheme", format: (v) => TRACEABILITY_SCHEMES[String(v)]?.name ?? (v ? String(v) : "—") },
+      { key: "counterpartyName", label: "Counterparty" },
+    ],
+    formFields: [
+      { key: "date", label: "Date", type: "date", required: true },
+      { key: "species", label: "Species", type: "select", required: true, options: TRACEABLE_SPECIES_OPTIONS },
+      { key: "direction", label: "Direction", type: "select", required: true, options: [
+        { value: "IN", label: "Onto Property (IN)" },
+        { value: "OUT", label: "Off Property (OUT)" },
+      ]},
+      { key: "headCount", label: "Head Count", type: "number", required: true },
+      { key: "tagNumbers", label: "Tag Numbers", type: "textarea" },
+      { key: "counterpartyName", label: "Counterparty Name", type: "text" },
+      { key: "counterpartyPropertyId", label: "Counterparty Property ID", type: "text" },
+      { key: "reference", label: "Movement Reference #", type: "text" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    list: async (farmId) => (await getDb()).select().from(schema.livestockMovements).where(eq(schema.livestockMovements.farmId, farmId)).orderBy(desc(schema.livestockMovements.date)) as unknown as Promise<Record<string, unknown>[]>,
+    create: async (farmId, data) => {
+      const db = await getDb();
+      let scheme = (data as Record<string, unknown>).scheme as string | undefined;
+      if (!scheme) {
+        const [farm] = await db.select({ countryProfile: schema.farms.countryProfile }).from(schema.farms).where(eq(schema.farms.id, farmId)).limit(1);
+        scheme = resolveCountryProfile(farm?.countryProfile).regulatory.traceabilityScheme;
+      }
+      const [row] = await db.insert(schema.livestockMovements).values({ ...data, farmId, scheme } as any).returning();
+      return row as Record<string, unknown>;
+    },
+    update: async (farmId, id, data) => {
+      const [row] = await getDb().update(schema.livestockMovements).set(data).where(and(eq(schema.livestockMovements.id, id), eq(schema.livestockMovements.farmId, farmId))).returning();
+      return row as Record<string, unknown>;
+    },
+    delete: async (farmId, id) => { await getDb().delete(schema.livestockMovements).where(and(eq(schema.livestockMovements.id, id), eq(schema.livestockMovements.farmId, farmId))); },
   },
 };
 
@@ -2011,7 +2067,7 @@ export const MODULE_TAB_GROUPS: Record<string, { id: string; label: string }[]> 
  * Get locale-aware adapter for a module.
  * Returns column definitions with locale-aware formatters and dynamic regulatory labels.
  */
-export function getLocaleAwareAdapter(moduleId: string, locale: string | undefined, chemicalRegLabel?: string): ModuleAdapter | null {
+export function getLocaleAwareAdapter(moduleId: string, locale: string | undefined, chemicalRegLabel?: string, traceabilityTagLabel?: string): ModuleAdapter | null {
   const baseAdapter = MODULE_ADAPTERS[moduleId];
   if (!baseAdapter) return null;
 
@@ -2038,6 +2094,18 @@ export function getLocaleAwareAdapter(moduleId: string, locale: string | undefin
     const regColIndex = columns.findIndex((c) => c.key === "registrationNo");
     if (regColIndex >= 0) {
       columns[regColIndex] = { ...columns[regColIndex], label: chemicalRegLabel };
+    }
+  }
+
+  // For livestock traceability, use the country profile's scheme-specific tag
+  // terminology (e.g. "NAIT Number" for NZ, "NLIS Device ID" for AU)
+  if (moduleId === "livestock-traceability" && traceabilityTagLabel) {
+    formFields = formFields.map((field) =>
+      field.key === "tagNumbers" ? { ...field, label: traceabilityTagLabel } : field
+    );
+    const tagColIndex = columns.findIndex((c) => c.key === "tagNumbers");
+    if (tagColIndex >= 0) {
+      columns[tagColIndex] = { ...columns[tagColIndex], label: traceabilityTagLabel };
     }
   }
 

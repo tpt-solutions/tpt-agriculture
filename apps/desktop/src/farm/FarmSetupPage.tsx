@@ -2,7 +2,8 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { getDb } from "@tpt/core";
+import { getDb, FARM_TEMPLATES, seedStandardChemicals } from "@tpt/core";
+import type { FarmTemplate } from "@tpt/core";
 import { farms } from "@tpt/core/schema";
 import { generateBackupKey, storeBackupKey } from "../backup/keygen.js";
 import { useFarm } from "./FarmContext.js";
@@ -11,14 +12,23 @@ import { Button } from "@tpt/ui";
 import { Input } from "@tpt/ui";
 import { FormField } from "@tpt/ui";
 
+type Step = "template" | "name" | "modules";
+
 export function FarmSetupPage() {
   const navigate = useNavigate();
   const { refresh } = useFarm();
-  const [step, setStep] = useState<"name" | "modules">("name");
+  const [step, setStep] = useState<Step>("template");
+  const [selectedTemplate, setSelectedTemplate] = useState<FarmTemplate | null>(null);
   const [farmName, setFarmName] = useState("");
   const [enabledModuleIds, setEnabledModuleIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function handleTemplateSelect(template: FarmTemplate) {
+    setSelectedTemplate(template);
+    setEnabledModuleIds(template.moduleIds);
+    setStep("name");
+  }
 
   function handleNameSubmit(e: FormEvent) {
     e.preventDefault();
@@ -31,13 +41,21 @@ export function FarmSetupPage() {
     try {
       const db = await getDb();
       const now = new Date();
+      const settings: Record<string, unknown> = { enabledModuleIds };
+      if (selectedTemplate && selectedTemplate.id !== "custom") {
+        settings.templateId = selectedTemplate.id;
+      }
+      const farmId = crypto.randomUUID();
       await db.insert(farms).values({
-        id: crypto.randomUUID(),
+        id: farmId,
         name: farmName,
-        settingsJson: { enabledModuleIds },
+        settingsJson: settings,
         createdAt: now,
         updatedAt: now,
       });
+      if (enabledModuleIds.includes("pest-spray-log")) {
+        await seedStandardChemicals(db, farmId);
+      }
       await refresh();
 
       const key = await generateBackupKey();
@@ -49,6 +67,38 @@ export function FarmSetupPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (step === "template") {
+    const templates = FARM_TEMPLATES;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
+        <div className="w-full max-w-3xl">
+          <h1 className="mb-2 text-center text-2xl font-bold text-green-700">
+            TPT Agriculture
+          </h1>
+          <p className="mb-8 text-center text-sm text-gray-500">
+            What type of farm are you running? This helps us pre-select the right modules for you.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map((tmpl) => (
+              <button
+                key={tmpl.id}
+                type="button"
+                onClick={() => handleTemplateSelect(tmpl)}
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:border-green-400 hover:shadow-md"
+              >
+                <span className="text-2xl">{tmpl.icon}</span>
+                <div>
+                  <div className="text-sm font-semibold text-gray-800">{tmpl.name}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{tmpl.description}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (step === "modules") {
@@ -115,7 +165,12 @@ export function FarmSetupPage() {
             />
           </FormField>
 
-          <Button type="submit">Continue</Button>
+          <div className="flex gap-2">
+            <Button type="submit">Continue</Button>
+            <Button type="button" variant="secondary" onClick={() => setStep("template")}>
+              Back
+            </Button>
+          </div>
         </form>
       </div>
     </div>

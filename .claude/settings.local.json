@@ -3,7 +3,8 @@
     "allow": [
       "PowerShell(Get-ChildItem -Path \"c:\\\\Programming\\\\2 WIP\\\\tpt-agriculture\\\\apps\" -ErrorAction SilentlyContinue | Select-Object Name, @{Name=\"Type\";Expression={$_.PSIsContainer ? \"Dir\" : \"File\"}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Programming\\\\2 WIP\\\\tpt-agriculture\\\\packages\\\\modules\" -ErrorAction SilentlyContinue | Select-Object Name, @{Name=\"Type\";Expression={$_.PSIsContainer ? \"Dir\" : \"File\"}} | Format-Table -AutoSize)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Programming\\\\2 WIP\\\\tpt-agriculture\\\\packages\\\\core\" | Select-Object Name, @{Name=\"Type\";Expression={$_.PSIsContainer ? \"Dir\" : \"File\"}})"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Programming\\\\2 WIP\\\\tpt-agriculture\\\\packages\\\\core\" | Select-Object Name, @{Name=\"Type\";Expression={$_.PSIsContainer ? \"Dir\" : \"File\"}})",
+      "Bash(node verify4.js)"
     ]
   }
 }

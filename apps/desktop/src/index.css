@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Tailwind's automatic content scanner only walks this app's own directory —
+ * it never sees classNames written in the shared @tpt/ui package, so any
+ * utility that only appears there (e.g. Button's `bg-green-600`) was silently
+ * dropped from the compiled CSS, leaving genuinely transparent button
+ * backgrounds with white text. This is the actual cause of the invisible
+ * "white on white" buttons. */
+@source "../../../packages/ui/src";
+
+:root {
+  /* This app has no dark theme — declaring this stops WebView2/Chromium from
+   * auto-darkening native form controls (buttons, select popups, checkboxes)
+   * out of sync with our light-only Tailwind styling when Windows is in dark
+   * mode, which otherwise renders text unreadable against its background. */
+  color-scheme: light;
+}
+
 @theme {
   --color-brand-50: #f0fdf4;
   --color-brand-100: #dcfce7;

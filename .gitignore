@@ -18,3 +18,6 @@ apps/desktop/src-tauri/gen/
 
 # TPT Code Command Center — contains API keys and session token
 .vscode/settings.json
+
+# Local tooling runtime state
+.mimocode/

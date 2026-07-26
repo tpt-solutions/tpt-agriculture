@@ -44,6 +44,18 @@ pub fn run() {
             sql: include_str!("../../../../packages/core/migrations/0005_cynical_sleeper.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 7,
+            description: "sad_selene",
+            sql: include_str!("../../../../packages/core/migrations/0006_sad_selene.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "bored_tattoo",
+            sql: include_str!("../../../../packages/core/migrations/0007_bored_tattoo.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

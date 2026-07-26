@@ -6,6 +6,9 @@ import { MODULE_ADAPTERS } from "./registry.js";
 const AVAILABLE_MODULE_IDS = Object.keys(MODULE_ADAPTERS);
 const HORTICULTURE_IDS = BUNDLE_MODULES.HORTICULTURE.filter((id) => AVAILABLE_MODULE_IDS.includes(id));
 const LIVESTOCK_IDS = BUNDLE_MODULES.LIVESTOCK.filter((id) => AVAILABLE_MODULE_IDS.includes(id));
+const PLATFORM_IDS = BUNDLE_MODULES.FULL.filter(
+  (id) => AVAILABLE_MODULE_IDS.includes(id) && !HORTICULTURE_IDS.includes(id) && !LIVESTOCK_IDS.includes(id)
+);
 
 interface ModulePickerProps {
   selected: string[];
@@ -67,6 +70,7 @@ export function ModulePicker({ selected, onChange }: ModulePickerProps) {
       </div>
       {renderGroup("Horticulture", HORTICULTURE_IDS)}
       {renderGroup("Livestock", LIVESTOCK_IDS)}
+      {renderGroup("Farm Operations", PLATFORM_IDS)}
     </div>
   );
 }

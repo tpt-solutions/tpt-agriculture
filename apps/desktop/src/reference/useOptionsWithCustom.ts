@@ -1,6 +1,6 @@
 // Copyright 2024 TPT Solutions Ltd. // SPDX-License-Identifier: Apache-2.0
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { getDb, DEFAULT_OPTIONS } from "@tpt/core";
+import { getDb, getDefaultOptions } from "@tpt/core";
 import { customOptions } from "@tpt/core/schema";
 import { and, eq } from "drizzle-orm";
 
@@ -9,7 +9,7 @@ export interface SelectOption {
   label: string;
 }
 
-export function useOptionsWithCustom(farmId: string | null, listKey: string) {
+export function useOptionsWithCustom(farmId: string | null, listKey: string, countryId?: string) {
   const queryClient = useQueryClient();
 
   const { data: customValues = [] } = useQuery({
@@ -26,7 +26,7 @@ export function useOptionsWithCustom(farmId: string | null, listKey: string) {
     enabled: !!farmId,
   });
 
-  const defaults = DEFAULT_OPTIONS[listKey] ?? [];
+  const defaults = getDefaultOptions(listKey, countryId);
   const merged = Array.from(new Set([...defaults, ...customValues])).sort();
   const options: SelectOption[] = merged.map((value) => ({ value, label: value }));
 

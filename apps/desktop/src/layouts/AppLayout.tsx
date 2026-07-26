@@ -33,7 +33,14 @@ const PLATFORM_NAV_LINKS: SidebarLink[] = [
   { label: "Financials", href: "/modules/financials" },
   { label: "Input Prices", href: "/modules/input-prices" },
   { label: "Output Prices", href: "/modules/output-prices" },
+  { label: "Soil & Water", href: "/modules/soil-water" },
+  { label: "Inventory", href: "/modules/inventory" },
+  { label: "Equipment", href: "/modules/equipment" },
+  { label: "Compliance", href: "/modules/compliance" },
+  { label: "Staff", href: "/modules/staff" },
+  { label: "Fertiliser Applications", href: "/modules/fertiliser-applications" },
   { label: "Livestock Traceability", href: "/modules/livestock-traceability" },
+  { label: "Analytics", href: "/modules/analytics" },
   { label: "Reports", href: "/modules/reports" },
 ];
 

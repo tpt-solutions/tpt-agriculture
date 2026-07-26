@@ -1235,6 +1235,45 @@ export const MODULE_ADAPTERS: Record<string, ModuleAdapter> = {
     },
     delete: async (farmId, id) => { await getDb().delete(schema.livestockMovements).where(and(eq(schema.livestockMovements.id, id), eq(schema.livestockMovements.farmId, farmId))); },
   },
+
+  // ─── Platform: Fertiliser Applications ─────────────────────────────────────
+
+  "fertiliser-applications": {
+    moduleId: "fertiliser-applications",
+    label: "Fertiliser Applications",
+    primaryTable: "fertiliser_applications",
+    columns: [
+      { key: "applicationDate", label: "Date", type: "date" },
+      { key: "fieldName", label: "Field" },
+      { key: "fertiliserType", label: "Fertiliser" },
+      { key: "ratePerHa", label: "Rate / ha", type: "number" },
+      { key: "totalQuantity", label: "Total Qty", type: "number" },
+      { key: "unit", label: "Unit" },
+      { key: "cost", label: "Cost", type: "number" },
+    ],
+    formFields: [
+      { key: "applicationDate", label: "Application Date", type: "date", required: true },
+      { key: "fieldName", label: "Field / Paddock", type: "text" },
+      { key: "fertiliserType", label: "Fertiliser Type", type: "select", optionsKey: "fertiliser-type" },
+      { key: "ratePerHa", label: "Rate per Hectare", type: "number" },
+      { key: "totalQuantity", label: "Total Quantity", type: "number" },
+      { key: "unit", label: "Unit", type: "select", optionsKey: "unit-of-measure" },
+      { key: "cost", label: "Cost", type: "number" },
+      { key: "operator", label: "Operator", type: "text" },
+      { key: "method", label: "Application Method", type: "text" },
+      { key: "notes", label: "Notes", type: "textarea" },
+    ],
+    list: async (farmId) => (await getDb()).select().from(schema.fertiliserApplications).where(eq(schema.fertiliserApplications.farmId, farmId)).orderBy(desc(schema.fertiliserApplications.applicationDate)) as unknown as Promise<Record<string, unknown>[]>,
+    create: async (farmId, data) => {
+      const [row] = await getDb().insert(schema.fertiliserApplications).values({ ...data, farmId } as any).returning();
+      return row as Record<string, unknown>;
+    },
+    update: async (farmId, id, data) => {
+      const [row] = await getDb().update(schema.fertiliserApplications).set(data).where(and(eq(schema.fertiliserApplications.id, id), eq(schema.fertiliserApplications.farmId, farmId))).returning();
+      return row as Record<string, unknown>;
+    },
+    delete: async (farmId, id) => { await getDb().delete(schema.fertiliserApplications).where(and(eq(schema.fertiliserApplications.id, id), eq(schema.fertiliserApplications.farmId, farmId))); },
+  },
 };
 
 // ─── Sub-table adapters (Phase 18) ──────────────────────────────────────────

@@ -194,4 +194,16 @@ export const MODULE_REGISTRY: Record<string, ModuleMeta> = {
     description: "Onto/off-property movement register (NAIT, NLIS, and similar schemes per country profile)",
     billingUnit: "included",
   },
+  "fertiliser-applications": {
+    name: "Fertiliser Applications",
+    category: "platform",
+    description: "Log fertiliser applications by field, rate, cost and method",
+    billingUnit: "included",
+  },
+  analytics: {
+    name: "Analytics & KPIs",
+    category: "platform",
+    description: "Production trends and performance metrics over time",
+    billingUnit: "included",
+  },
 };

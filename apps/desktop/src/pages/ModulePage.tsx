@@ -21,6 +21,7 @@ import { ForeignKeySelect } from "../components/ForeignKeySelect.js";
 import { AttachmentsPanel } from "../components/AttachmentsPanel.js";
 import { countAttachments } from "../attachments/attachments-service.js";
 import { AuditLogPanel } from "../components/AuditLogPanel.js";
+import { BulkEntryPanel } from "../components/BulkEntryPanel.js";
 
 type SortDir = "asc" | "desc";
 
@@ -50,6 +51,7 @@ export function ModulePage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [attachmentsForId, setAttachmentsForId] = useState<string | null>(null);
   const [historyForId, setHistoryForId] = useState<string | null>(null);
+  const [showBulkEntry, setShowBulkEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -352,6 +354,11 @@ export function ModulePage() {
           {mod.create && (
             <Button onClick={openCreateForm}>+ Add {mod.label.replace(/s$/, "")}</Button>
           )}
+          {mod.formFields.some((f) => f.foreignKey) && mod.create && (
+            <Button variant="secondary" onClick={() => setShowBulkEntry(true)}>
+              Bulk Entry
+            </Button>
+          )}
         </div>
       }
     >
@@ -647,6 +654,22 @@ export function ModulePage() {
           onClose={() => setHistoryForId(null)}
         />
       )}
+
+      {showBulkEntry && mod.formFields.some((f) => f.foreignKey) && (() => {
+        // Find the foreignKey field to determine the parent module
+        const fkField = mod.formFields.find((f) => f.foreignKey);
+        if (!fkField?.foreignKey) return null;
+        const parentModuleId = fkField.foreignKey.moduleId;
+        const parentLabelField = fkField.foreignKey.labelField;
+        return (
+          <BulkEntryPanel
+            parentModuleId={parentModuleId}
+            parentLabelField={parentLabelField}
+            childAdapter={mod}
+            onClose={() => setShowBulkEntry(false)}
+          />
+        );
+      })()}
     </DashboardShell>
   );
 }

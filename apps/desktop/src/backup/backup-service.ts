@@ -63,6 +63,7 @@ export async function exportEncryptedBackup(farmId: string): Promise<Blob> {
     "compliance_checks",
     "staff_members",
     "livestock_movements",
+    "fertiliser_applications",
     "attachments",
     "audit_log",
   ];

@@ -10,6 +10,8 @@ import { useFarm } from "../farm/FarmContext.js";
 import { MODULE_ADAPTERS } from "../modules/registry.js";
 import { rowsToCsv, downloadCsv } from "../utils/csv-export.js";
 import { generateTablePdf, downloadPdf } from "../utils/pdf-export.js";
+import { CONNECTORS } from "../accounting/xero-connector.js";
+import type { LedgerEntry } from "../accounting/accounting-connector.js";
 
 interface LedgerRow {
   id: string;
@@ -151,6 +153,26 @@ export function ReportsPage() {
     }
   }
 
+  const [selectedConnector, setSelectedConnector] = useState(CONNECTORS[0]?.id ?? "");
+
+  function handleExportAccounting() {
+    if (ledgerRows.length === 0) {
+      toast.error("No ledger entries in the selected date range");
+      return;
+    }
+    const connector = CONNECTORS.find((c) => c.id === selectedConnector);
+    if (!connector) return;
+
+    const blob = connector.exportLedger(farmName ?? "Farm", ledgerRows as LedgerEntry[], fromDate, toDate);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tpt-finance-${fromDate}-to-${toDate}.${connector.fileExtension}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported for ${connector.name}`);
+  }
+
   return (
     <DashboardShell title="Reports">
       <p className="mb-6 text-sm text-gray-500">
@@ -225,7 +247,7 @@ export function ReportsPage() {
         )}
       </section>
 
-      <section className="rounded-lg border border-gray-200 p-4">
+      <section className="mb-8 rounded-lg border border-gray-200 p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">Module Data Export</h3>
         <p className="mb-3 text-sm text-gray-500">Export the full record list of any module as CSV.</p>
         <div className="flex flex-wrap items-end gap-3">
@@ -241,6 +263,31 @@ export function ReportsPage() {
             Export CSV
           </Button>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-gray-200 p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">Accounting Software Export</h3>
+        <p className="mb-3 text-sm text-gray-500">
+          Export your ledger entries in a format compatible with your accounting software.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Software</label>
+            <Select
+              value={selectedConnector}
+              onChange={(e) => setSelectedConnector(e.target.value)}
+              options={CONNECTORS.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </div>
+          <Button variant="secondary" onClick={handleExportAccounting} disabled={isLoading}>
+            Export
+          </Button>
+        </div>
+        {CONNECTORS.find((c) => c.id === selectedConnector) && (
+          <p className="mt-2 text-xs text-gray-500">
+            {CONNECTORS.find((c) => c.id === selectedConnector)?.description}
+          </p>
+        )}
       </section>
     </DashboardShell>
   );

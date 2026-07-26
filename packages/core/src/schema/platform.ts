@@ -125,6 +125,25 @@ export const attachments = sqliteTable("attachments", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+// ─── Fertiliser Applications ──────────────────────────────────────────────────
+
+export const fertiliserApplications = sqliteTable("fertiliser_applications", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  farmId: text("farm_id").notNull().references(() => farms.id, { onDelete: "cascade" }),
+  applicationDate: integer("application_date", { mode: "timestamp" }).notNull(),
+  fieldName: text("field_name"),
+  fertiliserType: text("fertiliser_type"),
+  ratePerHa: real("rate_per_ha"),
+  totalQuantity: real("total_quantity"),
+  unit: text("unit"),
+  cost: real("cost"),
+  operator: text("operator"),
+  method: text("method"),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 // Generic change-history log, written from a single choke point (the module
 // CRUD mutation hooks in `use-module-query.ts`) rather than per-adapter, so it

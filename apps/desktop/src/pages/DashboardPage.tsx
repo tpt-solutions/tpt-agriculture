@@ -53,9 +53,11 @@ const PLATFORM_CARDS: ModuleCard[] = [
   { id: "equipment", name: "Equipment", description: "Asset register, maintenance log, WoF/CoF reminders", category: "platform", path: "/modules/equipment" },
   { id: "compliance", name: "Compliance", description: "Regulatory checklist per country profile", category: "platform", path: "/modules/compliance" },
   { id: "staff", name: "Staff", description: "Staff roster, timesheets, contractor records", category: "platform", path: "/modules/staff" },
+  { id: "fertiliser-applications", name: "Fertiliser Applications", description: "Log fertiliser applications by field, rate and cost", category: "platform", path: "/modules/fertiliser-applications" },
   { id: "livestock-traceability", name: "Livestock Traceability", description: "NAIT/NLIS-style onto/off-property movement register", category: "platform", path: "/modules/livestock-traceability" },
   { id: "weather", name: "Weather & Spray Windows", description: "5-day hourly spray-window calculator", category: "platform", path: "/modules/weather" },
   { id: "decision-support", name: "Decision Support", description: "Rules-based farm advisory from your data", category: "platform", path: "/modules/decision-support" },
+  { id: "analytics", name: "Analytics & KPIs", description: "Production trends and performance metrics over time", category: "platform", path: "/modules/analytics" },
   { id: "reports", name: "Reports", description: "CSV/PDF financial summary and per-module data export for accountant/bank use", category: "platform", path: "/modules/reports" },
 ];
 
@@ -283,6 +285,8 @@ export function DashboardPage() {
             {cards.map((card) => {
               const count = recordCounts[card.id];
               const countStr = formatCount(count, card.name.split(" ").pop() ?? card.name);
+              const isHortOrLivestock = card.category === "horticulture" || card.category === "livestock";
+              const showNudge = isHortOrLivestock && count === 0;
               return (
                 <Link
                   key={card.id}
@@ -302,6 +306,11 @@ export function DashboardPage() {
                   <div className="mt-1 text-xs text-gray-600">
                     {card.description}
                   </div>
+                  {showNudge && (
+                    <div className="mt-2 rounded-md bg-white/60 px-2 py-1 text-xs text-green-700">
+                      Get started — add your first record →
+                    </div>
+                  )}
                 </Link>
               );
             })}
